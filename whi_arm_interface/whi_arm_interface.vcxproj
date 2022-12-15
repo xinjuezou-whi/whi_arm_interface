@@ -37,12 +37,13 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{51aba00c-bc30-4a62-89f2-50b064d29380}</ProjectGuid>
     <Keyword>Linux</Keyword>
-    <RootNamespace>ar2_arm_interface</RootNamespace>
+    <RootNamespace>whi_arm_interface</RootNamespace>
     <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
     <ApplicationType>Linux</ApplicationType>
     <ApplicationTypeRevision>1.0</ApplicationTypeRevision>
     <TargetLinuxPlatform>Generic</TargetLinuxPlatform>
     <LinuxProjectType>{2238F9CD-F817-4ECC-BD14-2524D2669B35}</LinuxProjectType>
+    <ProjectName>whi_arm_interface</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
@@ -80,19 +81,23 @@
     <RemoteOutRelDir>$(RemoteProjectRelDir)/ms_build/bin/$(Platform)/$(Configuration)</RemoteOutRelDir>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="src\ar2_arm_interface_node.cpp" />
+    <ClCompile Include="src\sdk\driver_socket.cpp" />
+    <ClCompile Include="src\sdk\net_socket.cpp" />
+    <ClCompile Include="src\whi_arm_interface_node.cpp" />
     <ClCompile Include="src\sdk\ar2_arm_hardware.cpp" />
     <ClCompile Include="src\sdk\driver_rosserial.cpp" />
     <ClCompile Include="src\sdk\driver_serial.cpp" />
     <ClCompile Include="src\sdk\whi_arm_hardware_base.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\ar2_arm_interface\ar2_arm_hardware.h" />
-    <ClInclude Include="include\ar2_arm_interface\driver_base.h" />
-    <ClInclude Include="include\ar2_arm_interface\driver_rosserial.h" />
-    <ClInclude Include="include\ar2_arm_interface\driver_serial.h" />
-    <ClInclude Include="include\ar2_arm_interface\rotary_encoder_base.h" />
-    <ClInclude Include="include\ar2_arm_interface\whi_arm_hardware_base.h" />
+    <ClInclude Include="include\whi_arm_interface\ar2_arm_hardware.h" />
+    <ClInclude Include="include\whi_arm_interface\driver_base.h" />
+    <ClInclude Include="include\whi_arm_interface\driver_rosserial.h" />
+    <ClInclude Include="include\whi_arm_interface\driver_serial.h" />
+    <ClInclude Include="include\whi_arm_interface\driver_socket.h" />
+    <ClInclude Include="include\whi_arm_interface\net_socket.h" />
+    <ClInclude Include="include\whi_arm_interface\rotary_encoder_base.h" />
+    <ClInclude Include="include\whi_arm_interface\whi_arm_hardware_base.h" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <ClCompile>
@@ -101,7 +106,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>/opt/ros/noetic/lib;/opt/ros/melodic/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <LibraryDependencies>roslib;roscpp;rosconsole;rospack;rostime;roscpp_serialization;rosconsole_log4cxx;rosconsole_backend_interface;xmlrpcpp;cpp_common;class_loader;controller_manager;serial;boost_system;%(LibraryDependencies)</LibraryDependencies>
+      <LibraryDependencies>roslib;roscpp;rosconsole;rospack;rostime;roscpp_serialization;rosconsole_log4cxx;rosconsole_backend_interface;xmlrpcpp;cpp_common;class_loader;controller_manager;serial;boost_system;pthread;%(LibraryDependencies)</LibraryDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

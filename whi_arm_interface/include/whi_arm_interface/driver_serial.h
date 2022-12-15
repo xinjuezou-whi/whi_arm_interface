@@ -45,7 +45,7 @@ public:
 
 public:
 	// specific
-	void setMotor(int ForwardDir);
+	void setMotor(const std::vector<int>& LimitsDir);
 	void setEncoder(unsigned int Resolution);
 
 protected:
@@ -58,7 +58,6 @@ protected:
 	std::string serial_port_{ "" };
 	unsigned int baudrate_{ 9600 };
 	std::shared_ptr<serial::Serial> serial_inst_{ nullptr };
-	int forward_dir_{ 1 };
 	std::mutex mtx_;
 	double angular_value_;
 	std::shared_ptr<RotaryEncoderBase> encoder_{ nullptr };

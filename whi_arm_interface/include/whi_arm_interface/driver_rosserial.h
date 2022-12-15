@@ -44,7 +44,7 @@ public:
 
 public:
 	// specific
-	void setMotor(int ForwardDir);
+	void setMotor(const std::vector<int>& LimitsDir);
 	void setEncoder(unsigned int Resolution);
 	void registerResponse(ResponseFunc Func);
 
@@ -55,9 +55,7 @@ protected:
 protected:
 	std::unique_ptr<ros::Publisher> pub_{ nullptr };
 	std::unique_ptr<ros::Subscriber> sub_{ nullptr };
-	int forward_dir_{ 1 };
-	double angular_value_;
+	double angular_value_{ 0.0 };
 	std::shared_ptr<RotaryEncoderBase> encoder_{ nullptr };
-	long pre_encoder_{ 0 };
 	ResponseFunc responseCallback_{ nullptr };
 };

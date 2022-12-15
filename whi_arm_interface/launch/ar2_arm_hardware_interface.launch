@@ -7,7 +7,6 @@
   <!-- params -->
   <rosparam file="$(find ar2_arm_interface)/config/hardware_ar2.yaml" command="load"/>
   <rosparam file="$(find ar2_arm_interface)/config/controllers_ar2.yaml" command="load"/>
-  <rosparam file="$(find ar2_arm_interface)/config/joint_offsets_ar2.yaml" command="load"/>
 
   <!-- Load moveit joint limits config in separate namespace to get velocity limits -->
   <rosparam file="$(find ar3_moveit_config)/config/joint_limits.yaml" command="load" ns="ar3"/>

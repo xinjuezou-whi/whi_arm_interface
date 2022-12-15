@@ -12,9 +12,9 @@ GNU General Public License, check LICENSE for more information.
 All text above must be included in any redistribution.
 
 ******************************************************************/
-#include "ar2_arm_interface/ar2_arm_hardware.h"
-#include "ar2_arm_interface/driver_serial.h"
-#include "ar2_arm_interface/driver_rosserial.h"
+#include "whi_arm_interface/ar2_arm_hardware.h"
+#include "whi_arm_interface/driver_serial.h"
+#include "whi_arm_interface/driver_rosserial.h"
 
 #include <angles/angles.h>
 #include <std_msgs/String.h>
@@ -54,6 +54,7 @@ namespace whi_arm_hardware_interface
         }
         node_handle_->getParam("/ar2_arm/hardware_interface/steps_per_degree/", steps_per_deg_);
         node_handle_->getParam("/ar2_arm/hardware_interface/forward_dir/", forward_dir_);
+        node_handle_->getParam("/ar2_arm/hardware_interface/limits_dir/", limits_dir_);
         node_handle_->getParam("/ar2_arm/hardware_interface/home_offsets/", home_offsets_);
         node_handle_->getParam("/ar2_arm/hardware_interface/home_kinematics/", home_kinematics_);
         for (std::size_t i = 0; i < joint_names_.size(); ++i)
@@ -75,6 +76,7 @@ namespace whi_arm_hardware_interface
             std::string topic;
             node_handle_->param("/ar2_arm/hardware_interface/rosserial/topic", topic, std::string("/arm_hardware_interface"));
             drivers_map_.emplace(name_, std::make_unique<DriverRosserial>(name_, node_handle_, topic));
+            ((DriverRosserial*)drivers_map_[name_].get())->setMotor(limits_dir_);
             ((DriverRosserial*)drivers_map_[name_].get())->registerResponse(std::bind(&Ar2HardwareInterface::callbackResponse, this, std::placeholders::_1));
         }
         else if (hardwareStr == hardware[SERIAL])
@@ -90,6 +92,7 @@ namespace whi_arm_hardware_interface
                 {
                     auto serialInst = std::make_shared<serial::Serial>(port, baudrate, serial::Timeout::simpleTimeout(500));
                     drivers_map_.emplace(name_, std::make_unique<DriverSerial>(name_, serialInst));
+                    ((DriverSerial*)drivers_map_[name_].get())->setMotor(limits_dir_);
                 }
                 catch (serial::IOException& e)
                 {
@@ -159,8 +162,8 @@ namespace whi_arm_hardware_interface
             for (std::size_t i = 0; i < joint_position_command_.size(); ++i)
             {
                 double degCmd = angles::to_degrees(joint_position_command_[i]);
-                double degPre = angles::to_degrees(joint_position_[i]);
-                int step = int((degCmd - degPre) * steps_per_deg_[i]) * forward_dir_[i];
+                double degCur = angles::to_degrees(joint_position_[i]);
+                int step = int((degCmd - degCur) * steps_per_deg_[i]) * forward_dir_[i];
                 cmd.append(std::string(1, axes_prefix_[i]) + (step >= 0 ? "1" : "0") + std::to_string(abs(step)));
             }
             cmd.append(std::string("S") + std::to_string(speed_rate_) +
@@ -185,12 +188,17 @@ namespace whi_arm_hardware_interface
             std::string cmd("hm");
             for (std::size_t i = 0; i < joint_position_command_.size(); ++i)
             {
-                int step = int(home_offsets_[i] * steps_per_deg_[i]);
+                int step = int(home_offsets_[i] * steps_per_deg_[i]) * forward_dir_[i];
                 cmd.append(std::string(1, axes_prefix_[i]) + (step >= 0 ? "1" : "0") + std::to_string(abs(step)));
             }
             cmd.append(std::string("S") + std::to_string(int(home_kinematics_[0])) +
                 "G" + std::to_string(int(home_kinematics_[1])) + "H" + std::to_string(int(home_kinematics_[2])) +
-                "I" + std::to_string(int(home_kinematics_[3])) + "K" + std::to_string(int(home_kinematics_[4])));
+                "I" + std::to_string(int(home_kinematics_[3])) + "K" + std::to_string(int(home_kinematics_[4])) +
+                "l");
+            for (const auto& it : limits_dir_)
+            {
+                cmd.append(it > 0 ? "1" : "0");
+            }
 
             drivers_map_[name_]->actuate(cmd);
 #ifdef DEBUG
@@ -204,17 +212,32 @@ namespace whi_arm_hardware_interface
         if (State.find("homing") != std::string::npos)
         {
             homing_state_ = STA_HOMING;
+            std::cout << "start to homing..." << std::endl;
         }
         else if (State.find("homed") != std::string::npos)
         {
             homing_state_ = STA_HOMED;
+            std::cout << "homed successfully" << std::endl;
         }
         else if (State.find("p") != std::string::npos)
         {
             if (mode_close_loop_)
             {
-                int index = std::stoi(State.substr(1, 1));
-                joint_position_[index] = angles::from_degrees(std::stoi(State.substr(2)) / steps_per_deg_[index]);
+                std::size_t begin = 0;
+                std::size_t end = 0;
+                for (std::size_t i = 0; i < joint_position_.size(); ++i)
+                {
+                    begin = State.find('p', begin);
+                    end = State.find('p', begin + 1);
+                    if (end > begin)
+                    {
+                        joint_position_[i] = angles::from_degrees(forward_dir_[i] * std::stoi(State.substr(begin + 1, end - begin - 1)) / steps_per_deg_[i]);
+                        begin = end;
+#ifdef DEBUG
+                        std::cout << "pose of joint " << i << " " << angles::to_degrees(joint_position_[i]) << std::endl;
+#endif
+                    }
+                }
             }
         }
     }

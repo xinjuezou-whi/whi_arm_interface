@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(ar2_arm_interface)
+project(whi_arm_interface)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++17)
@@ -134,10 +134,6 @@ add_library(whi_arm_hardware ${WHI_SDK_SRC})
 target_link_libraries(whi_arm_hardware
    ${catkin_LIBRARIES}
 )
-
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/ar2_arm_interface.cpp
-# )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

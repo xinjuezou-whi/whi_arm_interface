@@ -15,7 +15,7 @@ GNU General Public License, check LICENSE for more information.
 All text above must be included in any redistribution.
 
 ******************************************************************/
-#include "ar2_arm_interface/driver_rosserial.h"
+#include "whi_arm_interface/driver_rosserial.h"
 
 DriverRosserial::DriverRosserial(const std::string& JointName, std::shared_ptr<ros::NodeHandle> NodeHandle, std::string Topic)
 	: DriverBase(JointName)
@@ -52,9 +52,19 @@ void DriverRosserial::cal_angularVel2PwmDuty()
 	// leave for override
 }
 
-void DriverRosserial::setMotor(int ForwardDir)
+void DriverRosserial::setMotor(const std::vector<int>& LimitsDir)
 {
-	forward_dir_ = ForwardDir;
+	if (pub_)
+	{
+		std_msgs::String strMsg;
+		std::string dirs("lt");
+		for (const auto& it : LimitsDir)
+		{
+			dirs.append(it > 0 ? "1" : "0");
+		}
+		strMsg.data = dirs;
+		pub_->publish(strMsg);
+	}
 }
 
 void DriverRosserial::setEncoder(unsigned int Resolution)

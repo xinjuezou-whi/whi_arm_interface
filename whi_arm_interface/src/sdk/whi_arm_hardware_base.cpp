@@ -12,10 +12,8 @@ GNU General Public License, check LICENSE for more information.
 All text above must be included in any redistribution.
 
 ******************************************************************/
-#include "ar2_arm_interface/whi_arm_hardware_base.h"
-/// <summary>
-/// 
-/// </summary>
+#include "whi_arm_interface/whi_arm_hardware_base.h"
+
 namespace whi_arm_hardware_interface
 {
 	const char* ArmHardware::hardware[HARDWARE_SUM] = { "i2c", "canbus", "serial", "rosserial"};

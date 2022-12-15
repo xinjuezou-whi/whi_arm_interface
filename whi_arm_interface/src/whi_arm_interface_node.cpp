@@ -19,7 +19,7 @@ Changelog:
 #include <functional>
 #include <iostream>
 
-#include "ar2_arm_interface/ar2_arm_hardware.h"
+#include "whi_arm_interface/ar2_arm_hardware.h"
 
 #define ASYNC 1
 
@@ -33,11 +33,11 @@ void signalHandler(int Signal)
 int main(int argc, char** argv)
 {
 	/// node version and copyright announcement
-	std::cout << "\nWHI arm interface for AR2 VERSION 00.10" << std::endl;
+	std::cout << "\nWHI arm interface for AR2 VERSION 00.11.1" << std::endl;
 	std::cout << "Copyright © 2022-2023 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
 	/// ros infrastructure
-	ros::init(argc, argv, "ar2_arm_interface");
+	ros::init(argc, argv, "whi_arm_interface");
 	auto nodeHandle = std::make_shared<ros::NodeHandle>();
 
 	/// node logic
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
 	spinner.spin();
 #endif
 
-	std::cout << "ar2_arm_interface exited" << std::endl;
+	std::cout << "whi_arm_interface exited" << std::endl;
 
 	return 0;
 }
