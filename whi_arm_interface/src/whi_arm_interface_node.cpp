@@ -20,6 +20,7 @@ Changelog:
 #include <iostream>
 
 #include "whi_arm_interface/ar2_arm_hardware.h"
+#include "whi_arm_interface/chin_arm_hardware.h"
 
 #define ASYNC 1
 
@@ -33,7 +34,7 @@ void signalHandler(int Signal)
 int main(int argc, char** argv)
 {
 	/// node version and copyright announcement
-	std::cout << "\nWHI arm interface for AR2 VERSION 00.11.1" << std::endl;
+	std::cout << "\nWHI arm interface for AR2 VERSION 00.11.2" << std::endl;
 	std::cout << "Copyright © 2022-2023 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
 	/// ros infrastructure
@@ -41,8 +42,18 @@ int main(int argc, char** argv)
 	auto nodeHandle = std::make_shared<ros::NodeHandle>();
 
 	/// node logic
-	std::unique_ptr<whi_arm_hardware_interface::ArmHardware> armHardware =
-		std::make_unique<whi_arm_hardware_interface::Ar2HardwareInterface>(nodeHandle);
+	ros::NodeHandle nhPrivate("~");
+	std::string arm;
+	nhPrivate.param("arm", arm, std::string("ar2"));
+	std::unique_ptr<whi_arm_hardware_interface::ArmHardware> armHardware = nullptr;
+	if (arm == "ar2")
+	{
+		armHardware = std::make_unique<whi_arm_hardware_interface::Ar2HardwareInterface>(nodeHandle);
+	}
+	else if (arm == "chin")
+	{
+		armHardware = std::make_unique<whi_arm_hardware_interface::ChinHardwareInterface>(nodeHandle);
+	}
 
 	// override the default ros sigint handler, with this override the shutdown will be gracefull
 	// NOTE: this must be set after the NodeHandle is created

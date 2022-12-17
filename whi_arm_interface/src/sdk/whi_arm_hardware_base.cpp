@@ -16,7 +16,7 @@ All text above must be included in any redistribution.
 
 namespace whi_arm_hardware_interface
 {
-	const char* ArmHardware::hardware[HARDWARE_SUM] = { "i2c", "canbus", "serial", "rosserial"};
+	const char* ArmHardware::hardware[HARDWARE_SUM] = { "i2c", "canbus", "serial", "rosserial", "socket" };
 
 	ArmHardware::ArmHardware(std::shared_ptr<ros::NodeHandle>& NodeHandle)
 		: node_handle_(NodeHandle) {}

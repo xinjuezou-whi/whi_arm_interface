@@ -1,0 +1,19 @@
+chin_arm:
+  hardware_interface:
+    loop_hz: 20 # hz
+    joints:
+      - joint_1
+      - joint_2
+      - joint_3
+      - joint_4
+      - joint_5
+      - joint_6
+    speed_rate: 30
+    acc_duration: 15
+    acc_rate: 10
+    dec_duration: 20
+    dec_rate: 5
+    hardware: 'socket'
+    sockets:
+      addr: '192.168.4.44'
+      port: 8888

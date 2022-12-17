@@ -3,10 +3,11 @@
   <!-- argument -->
   <arg name="home" default="false"/>
   <arg name="close_loop" default="true"/>
+  <arg name="arm" default="chin"/>
 
   <!-- params -->
-  <rosparam file="$(find ar2_arm_interface)/config/hardware_ar2.yaml" command="load"/>
-  <rosparam file="$(find ar2_arm_interface)/config/controllers_ar2.yaml" command="load"/>
+  <rosparam file="$(find whi_arm_interface)/config/hardware_$(arg arm).yaml" command="load"/>
+  <rosparam file="$(find whi_arm_interface)/config/controllers_$(arg arm).yaml" command="load"/>
 
   <!-- Load moveit joint limits config in separate namespace to get velocity limits -->
   <rosparam file="$(find ar3_moveit_config)/config/joint_limits.yaml" command="load" ns="ar3"/>
@@ -18,21 +19,24 @@
   <param name="robot_description_semantic" textfile="$(find ar3_moveit_config)/config/ar3.srdf"/>
 
   <!-- Start hardware_interface node -->
-  <node name="ar2_arm_interface" pkg="ar2_arm_interface" type="ar2_arm_interface_node" output="screen">
+  <node name="whi_arm_interface" pkg="whi_arm_interface" type="whi_arm_interface_node" output="screen">
     <param name="home" type="bool" value="true" if="$(arg home)"/>
     <param name="home" type="bool" value="false" unless="$(arg home)"/>
     <param name="close_loop" type="bool" value="true" if="$(arg close_loop)"/>
     <param name="close_loop" type="bool" value="false" unless="$(arg close_loop)"/>
+    <param name="arm" value="$(arg arm)"/>
   </node>
 
   <!-- rosserial server -->
-  <node pkg="rosserial_python" name="serial_node" type="serial_node.py" output="screen">
-    <param name="~port" value="/dev/ttyACM0"/>
-    <param name="~baud" value="115200"/>
-  </node>
+  <group if="$(eval arg('arm') == 'ar2')">
+    <node pkg="rosserial_python" name="serial_node" type="serial_node.py" output="screen">
+      <param name="~port" value="/dev/ttyACM0"/>
+      <param name="~baud" value="115200"/>
+    </node>
+  </group>
 
   <!-- Start controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="/" 
-        args="/ar2_arm/controllers/state
-	          /ar2_arm/controllers/position"/>
+        args="/whi_arm/controllers/state
+	          /whi_arm/controllers/position"/>
 </launch>

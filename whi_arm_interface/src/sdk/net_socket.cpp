@@ -168,11 +168,11 @@ uint32_t SocketAddress::getAddressAsString(std::string& Addr) const
     {
     case AF_INET:
         ans = inet_ntop(net_family, &reinterpret_cast<const sockaddr_in*>(platform_data_.get())->sin_addr,
-            Addr.data(), Addr.length());
+            Addr.data(), (unsigned int)Addr.length());
         break;
     case AF_INET6:
         ans = inet_ntop(net_family, &reinterpret_cast<const sockaddr_in6*>(platform_data_.get())->sin6_addr,
-            Addr.data(), Addr.length());
+            Addr.data(), (unsigned int)Addr.length());
         break;
     }
 

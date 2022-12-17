@@ -81,6 +81,7 @@
     <RemoteOutRelDir>$(RemoteProjectRelDir)/ms_build/bin/$(Platform)/$(Configuration)</RemoteOutRelDir>
   </PropertyGroup>
   <ItemGroup>
+    <ClCompile Include="src\sdk\chin_arm_hardware.cpp" />
     <ClCompile Include="src\sdk\driver_socket.cpp" />
     <ClCompile Include="src\sdk\net_socket.cpp" />
     <ClCompile Include="src\whi_arm_interface_node.cpp" />
@@ -91,6 +92,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\whi_arm_interface\ar2_arm_hardware.h" />
+    <ClInclude Include="include\whi_arm_interface\chin_arm_hardware.h" />
     <ClInclude Include="include\whi_arm_interface\driver_base.h" />
     <ClInclude Include="include\whi_arm_interface\driver_rosserial.h" />
     <ClInclude Include="include\whi_arm_interface\driver_serial.h" />

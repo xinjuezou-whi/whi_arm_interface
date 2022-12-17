@@ -36,7 +36,8 @@ public:
 
 public:
 	// specific
-	void setMotor(const std::vector<int>& LimitsDir);
+	void setMotor();
+	int getState();
 
 protected:
 	double angular_value_{ 0.0 };

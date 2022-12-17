@@ -33,7 +33,7 @@ namespace whi_arm_hardware_interface
 	class ArmHardware : public hardware_interface::RobotHW
 	{
 	public:
-		enum Hardware { I2C = 0, CAN_BUS, SERIAL, ROSSERIAL, HARDWARE_SUM };
+		enum Hardware { I2C = 0, CAN_BUS, SERIAL, ROSSERIAL, SOCKET, HARDWARE_SUM };
 		static const char* hardware[HARDWARE_SUM];
 
 	public:
