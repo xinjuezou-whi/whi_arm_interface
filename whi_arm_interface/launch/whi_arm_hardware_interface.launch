@@ -37,6 +37,6 @@
 
   <!-- Start controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="/" 
-        args="/whi_arm/controllers/state
-	          /whi_arm/controllers/position"/>
+        args="/$(arg arm)_arm/controllers/state
+	          /$(arg arm)_arm/controllers/position"/>
 </launch>

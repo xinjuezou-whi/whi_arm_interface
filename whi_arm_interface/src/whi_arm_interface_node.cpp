@@ -19,8 +19,8 @@ Changelog:
 #include <functional>
 #include <iostream>
 
-#include "whi_arm_interface/ar2_arm_hardware.h"
-#include "whi_arm_interface/chin_arm_hardware.h"
+#include "whi_arm_interface/arm_hardware_ar2.h"
+#include "whi_arm_interface/arm_hardware_chin.h"
 
 #define ASYNC 1
 
@@ -34,8 +34,8 @@ void signalHandler(int Signal)
 int main(int argc, char** argv)
 {
 	/// node version and copyright announcement
-	std::cout << "\nWHI arm interface for AR2 VERSION 00.11.2" << std::endl;
-	std::cout << "Copyright © 2022-2023 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
+	std::cout << "\nWHI arm interface VERSION 01.12" << std::endl;
+	std::cout << "Copyright © 2022-2024 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
 	/// ros infrastructure
 	ros::init(argc, argv, "whi_arm_interface");
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 	/// node logic
 	ros::NodeHandle nhPrivate("~");
 	std::string arm;
-	nhPrivate.param("arm", arm, std::string("ar2"));
+	nhPrivate.param("arm", arm, std::string("whi"));
 	std::unique_ptr<whi_arm_hardware_interface::ArmHardware> armHardware = nullptr;
 	if (arm == "ar2")
 	{

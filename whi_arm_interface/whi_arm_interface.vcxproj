@@ -81,18 +81,18 @@
     <RemoteOutRelDir>$(RemoteProjectRelDir)/ms_build/bin/$(Platform)/$(Configuration)</RemoteOutRelDir>
   </PropertyGroup>
   <ItemGroup>
-    <ClCompile Include="src\sdk\chin_arm_hardware.cpp" />
+    <ClCompile Include="src\sdk\arm_hardware_ar2.cpp" />
+    <ClCompile Include="src\sdk\arm_hardware_chin.cpp" />
     <ClCompile Include="src\sdk\driver_socket.cpp" />
     <ClCompile Include="src\sdk\net_socket.cpp" />
     <ClCompile Include="src\whi_arm_interface_node.cpp" />
-    <ClCompile Include="src\sdk\ar2_arm_hardware.cpp" />
     <ClCompile Include="src\sdk\driver_rosserial.cpp" />
     <ClCompile Include="src\sdk\driver_serial.cpp" />
     <ClCompile Include="src\sdk\whi_arm_hardware_base.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\whi_arm_interface\ar2_arm_hardware.h" />
-    <ClInclude Include="include\whi_arm_interface\chin_arm_hardware.h" />
+    <ClInclude Include="include\whi_arm_interface\arm_hardware_ar2.h" />
+    <ClInclude Include="include\whi_arm_interface\arm_hardware_chin.h" />
     <ClInclude Include="include\whi_arm_interface\driver_base.h" />
     <ClInclude Include="include\whi_arm_interface\driver_rosserial.h" />
     <ClInclude Include="include\whi_arm_interface\driver_serial.h" />

@@ -12,7 +12,7 @@ GNU General Public License, check LICENSE for more information.
 All text above must be included in any redistribution.
 
 ******************************************************************/
-#include "whi_arm_interface/chin_arm_hardware.h"
+#include "whi_arm_interface/arm_hardware_chin.h"
 #include "whi_arm_interface/driver_socket.h"
 
 namespace whi_arm_hardware_interface

@@ -21,9 +21,6 @@
     <ClCompile Include="src\sdk\whi_arm_hardware_base.cpp">
       <Filter>src\sdk</Filter>
     </ClCompile>
-    <ClCompile Include="src\sdk\ar2_arm_hardware.cpp">
-      <Filter>src\sdk</Filter>
-    </ClCompile>
     <ClCompile Include="src\sdk\driver_serial.cpp">
       <Filter>src\sdk</Filter>
     </ClCompile>
@@ -36,15 +33,15 @@
     <ClCompile Include="src\sdk\driver_socket.cpp">
       <Filter>src\sdk</Filter>
     </ClCompile>
-    <ClCompile Include="src\sdk\chin_arm_hardware.cpp">
+    <ClCompile Include="src\sdk\arm_hardware_ar2.cpp">
+      <Filter>src\sdk</Filter>
+    </ClCompile>
+    <ClCompile Include="src\sdk\arm_hardware_chin.cpp">
       <Filter>src\sdk</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\whi_arm_interface\whi_arm_hardware_base.h">
-      <Filter>include\whi_arm_interface</Filter>
-    </ClInclude>
-    <ClInclude Include="include\whi_arm_interface\ar2_arm_hardware.h">
       <Filter>include\whi_arm_interface</Filter>
     </ClInclude>
     <ClInclude Include="include\whi_arm_interface\driver_serial.h">
@@ -65,7 +62,10 @@
     <ClInclude Include="include\whi_arm_interface\driver_socket.h">
       <Filter>include\whi_arm_interface</Filter>
     </ClInclude>
-    <ClInclude Include="include\whi_arm_interface\chin_arm_hardware.h">
+    <ClInclude Include="include\whi_arm_interface\arm_hardware_ar2.h">
+      <Filter>include\whi_arm_interface</Filter>
+    </ClInclude>
+    <ClInclude Include="include\whi_arm_interface\arm_hardware_chin.h">
       <Filter>include\whi_arm_interface</Filter>
     </ClInclude>
   </ItemGroup>
