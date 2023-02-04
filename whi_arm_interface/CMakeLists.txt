@@ -133,7 +133,12 @@ add_library(whi_arm_hardware ${WHI_SDK_SRC})
 
 target_link_libraries(whi_arm_hardware
    ${catkin_LIBRARIES}
+   sockpp
 )
+
+# add_library(${PROJECT_NAME}
+#   src/${PROJECT_NAME}/whi_arm_interface.cpp
+# )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

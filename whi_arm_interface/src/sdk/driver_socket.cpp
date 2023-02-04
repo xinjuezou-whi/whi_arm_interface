@@ -13,8 +13,8 @@ All text above must be included in any redistribution.
 ******************************************************************/
 #include "whi_arm_interface/driver_socket.h"
 
-DriverSocket::DriverSocket(const std::string& JointName, std::shared_ptr<StreamSocket> Socket)
-	: DriverBase(JointName), socket_(Socket)
+DriverSocket::DriverSocket(const std::string& JointName)
+	: DriverBase(JointName)
 {
 
 }
@@ -22,24 +22,25 @@ DriverSocket::DriverSocket(const std::string& JointName, std::shared_ptr<StreamS
 DriverSocket::DriverSocket(const std::string& JointName, const std::string& Addr, int Port)
 	: DriverBase(JointName), addr_(Addr), port_(Port)
 {
-
+	connector_ = std::make_unique<sockpp::tcp_connector>();
+	connector_->connect(sockpp::inet_address(addr_, port_));
 }
 
 DriverSocket::~DriverSocket()
 {
-
+	if (connector_->is_connected())
+	{
+		std::string cmd("SHUT\r\n");
+		int res = connector_->write_n(cmd.c_str(), cmd.length());
+	}
 }
 
 double DriverSocket::readAngle()
 {
-	if (socket_)
+	if (connector_->is_connected())
 	{
 		std::string cmd("ANGLES\r\n");
-		socket_->send(cmd.c_str(), cmd.length());
-		socket_->waitforData();
-		char data[256] = { 0 };
-		size_t recvLen = 0;
-		socket_->recv(data, sizeof(data), recvLen);
+		int res = connector_->write_n(cmd.c_str(), cmd.length());
 	}
 	return angular_value_;
 }
@@ -50,9 +51,9 @@ void DriverSocket::actuate(double Command)
 
 void DriverSocket::actuate(std::string Command)
 {
-	if (socket_)
+	if (connector_->is_connected())
 	{
-		socket_->send(Command.c_str(), Command.length());
+		int res = connector_->write_n(Command.c_str(), Command.length());
 	}
 }
 
@@ -63,27 +64,23 @@ void DriverSocket::cal_angularVel2PwmDuty()
 
 void DriverSocket::setMotor()
 {
-	if (!socket_)
+	if (connector_->is_connected())
 	{
-		socket_ = std::make_shared<StreamSocket>();
+		std::string cmd("SERVO\r\n");
+		int res = connector_->write_n(cmd.c_str(), cmd.length());
 	}
-
-	SocketAddress addrPair(addr_, port_);
-	socket_->connect(addrPair);
-	std::string cmd("SERVO\r\n");
-	socket_->send(cmd.c_str(), cmd.length());
+	else
+	{
+		ROS_FATAL_STREAM_NAMED("failed to open socket %s", (addr_ + ":" + std::to_string(port_)).c_str());
+	}
 }
 
 int DriverSocket::getState()
 {
-	if (socket_)
+	if (connector_->is_connected())
 	{
 		std::string cmd("RUN_STATE\r\n");
-		socket_->send(cmd.c_str(), cmd.length());
-		socket_->waitforData();
-		char data[32] = { 0 };
-		size_t recvLen = 0;
-		socket_->recv(data, sizeof(data), recvLen);
+		int res = connector_->write_n(cmd.c_str(), cmd.length());
 	}
 
 	return 0;

@@ -16,13 +16,13 @@ Changelog:
 ******************************************************************/
 #pragma once
 #include "driver_base.h"
-#include "net_socket.h"
+#include "sockpp/tcp_connector.h"
 
 class DriverSocket : public DriverBase
 {
 public:
 	DriverSocket() = delete;
-	DriverSocket(const std::string& JointName, std::shared_ptr<StreamSocket> Socket);
+	DriverSocket(const std::string& JointName);
 	DriverSocket(const std::string& JointName, const std::string& Addr, int Port);
 	~DriverSocket() override;
 
@@ -40,9 +40,9 @@ public:
 	int getState();
 
 protected:
+	std::unique_ptr<sockpp::tcp_connector> connector_{ nullptr };
 	double angular_value_{ 0.0 };
 	std::shared_ptr<RotaryEncoderBase> encoder_{ nullptr };
-	std::shared_ptr<StreamSocket> socket_{ nullptr };
 	std::string addr_;
 	int port_{ 8888 };
 };

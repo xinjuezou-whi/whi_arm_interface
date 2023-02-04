@@ -1,6 +1,6 @@
 chin_arm:
   hardware_interface:
-    loop_hz: 20 # hz
+    loop_hz: 30 # hz
     joints:
       - joint_1
       - joint_2
@@ -16,4 +16,4 @@ chin_arm:
     hardware: 'socket'
     socket:
       addr: '192.168.4.44'
-      port: 8888
+      port: 9888
