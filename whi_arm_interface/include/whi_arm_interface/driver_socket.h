@@ -38,6 +38,7 @@ public:
 	// specific
 	void setMotor();
 	int getState();
+	std::vector<uint8_t> codingCommand(const std::string& Command) const;
 
 protected:
 	std::unique_ptr<sockpp::tcp_connector> connector_{ nullptr };
@@ -45,4 +46,5 @@ protected:
 	std::shared_ptr<RotaryEncoderBase> encoder_{ nullptr };
 	std::string addr_;
 	int port_{ 8888 };
+	std::vector<uint8_t> coded_command_;
 };

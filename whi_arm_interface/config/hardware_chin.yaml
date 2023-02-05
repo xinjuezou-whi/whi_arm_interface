@@ -16,4 +16,4 @@ chin_arm:
     hardware: 'socket'
     socket:
       addr: '192.168.4.44'
-      port: 9888
+      port: 9866 # 9866 port for crc, 9888 for terminated string
