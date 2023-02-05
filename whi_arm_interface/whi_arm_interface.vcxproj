@@ -84,7 +84,6 @@
     <ClCompile Include="src\sdk\arm_hardware_ar2.cpp" />
     <ClCompile Include="src\sdk\arm_hardware_chin.cpp" />
     <ClCompile Include="src\sdk\driver_socket.cpp" />
-    <ClCompile Include="src\sdk\net_socket.cpp" />
     <ClCompile Include="src\whi_arm_interface_node.cpp" />
     <ClCompile Include="src\sdk\driver_rosserial.cpp" />
     <ClCompile Include="src\sdk\driver_serial.cpp" />
@@ -97,7 +96,6 @@
     <ClInclude Include="include\whi_arm_interface\driver_rosserial.h" />
     <ClInclude Include="include\whi_arm_interface\driver_serial.h" />
     <ClInclude Include="include\whi_arm_interface\driver_socket.h" />
-    <ClInclude Include="include\whi_arm_interface\net_socket.h" />
     <ClInclude Include="include\whi_arm_interface\rotary_encoder_base.h" />
     <ClInclude Include="include\whi_arm_interface\whi_arm_hardware_base.h" />
   </ItemGroup>
