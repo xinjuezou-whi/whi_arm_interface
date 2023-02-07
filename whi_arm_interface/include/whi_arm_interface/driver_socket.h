@@ -37,8 +37,12 @@ public:
 public:
 	// specific
 	void setMotor();
+	std::vector<double> readAngles();
 	int getState();
+	bool sendCommand(const std::string& Command);
+	std::vector<std::string> readFeedback(const std::string& Command);
 	std::vector<uint8_t> codingCommand(const std::string& Command) const;
+	std::vector<std::string> decodingFeedback(const uint8_t* Data) const;
 
 protected:
 	std::unique_ptr<sockpp::tcp_connector> connector_{ nullptr };

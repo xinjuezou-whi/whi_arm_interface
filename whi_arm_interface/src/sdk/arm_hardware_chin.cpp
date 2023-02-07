@@ -110,11 +110,15 @@ namespace whi_arm_hardware_interface
 
     void ChinHardwareInterface::read()
     {
-        drivers_map_[name_]->readAngle();
+        std::vector<double> angles = ((DriverSocket*)drivers_map_[name_].get())->readAngles();
+        for (std::size_t i = 0; i < std::min(joint_position_.size(), angles.size()); ++i)
+        {
+            joint_position_[i] = angles[i];
+        }
     }
 
     void ChinHardwareInterface::write(ros::Duration ElapsedTime)
     {
-        ((DriverSocket*)drivers_map_[name_].get())->getState();
+        //((DriverSocket*)drivers_map_[name_].get())->getState();
     }
 }

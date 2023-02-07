@@ -15,6 +15,7 @@ All text above must be included in any redistribution.
 #include "CRC.h"
 
 #include <bitset>
+#include <regex>
 
 DriverSocket::DriverSocket(const std::string& JointName)
 	: DriverBase(JointName)
@@ -34,29 +35,20 @@ DriverSocket::~DriverSocket()
 {
 	if (connector_->is_connected())
 	{
-		std::vector<uint8_t> coded = codingCommand("SHUT");
-		int res = connector_->write_n(coded.data(), coded.size());
+		sendCommand("SHUT");
 		usleep(10000);
 	}
 }
 
+std::vector<std::string> split(const std::string SrcStr, const std::string RegexStr)
+{
+    std::regex regexz(RegexStr);
+    return { std::sregex_token_iterator(SrcStr.begin(), SrcStr.end(), regexz, -1),
+		std::sregex_token_iterator() };
+}
+
 double DriverSocket::readAngle()
 {
-	if (connector_->is_connected())
-	{
-		std::vector<uint8_t> coded = codingCommand("ANGLES");
-		int res = connector_->write_n(coded.data(), coded.size());
-		uint8_t read[4096] = { 0 };
-		ssize_t readCount = connector_->read_n(read, sizeof(read));
-		if (readCount > 0)
-		{
-			for (const auto& it : read)
-			{
-				std::cout << std::to_string(it) << ",";
-			}
-			std::cout << std::endl;
-		}
-	}
 	return angular_value_;
 }
 
@@ -81,18 +73,21 @@ void DriverSocket::setMotor()
 {
 	if (connector_->is_connected())
 	{
-#ifdef DEBUG
-		std::string Command("MOVEJ,1,-123.456,30,90");
-		std::vector<uint8_t> coded = codingCommand(Command);
-		std::cout << "debug coding with length: " << coded.size() << std::endl;
-		for (const auto& it : coded)
+		bool servoOn = false;
+		std::string cmd("SERVO_STATE");
+		if (sendCommand(cmd))
 		{
-			std::cout << std::hex << int(it) << ",";
+			std::vector<std::string> feedback = readFeedback(cmd);
+			for (const auto& it : feedback)
+			{
+				servoOn |= (it != "OFF");
+			}
 		}
-		std::cout << std::endl;
-#endif
-		std::vector<uint8_t> coded = codingCommand("SERVO");
-		int res = connector_->write_n(coded.data(), coded.size());
+		if (!servoOn)
+		{
+			std::vector<uint8_t> coded = codingCommand("SERVO");
+			int res = connector_->write_n(coded.data(), coded.size());
+		}
 	}
 	else
 	{
@@ -100,15 +95,79 @@ void DriverSocket::setMotor()
 	}
 }
 
+std::vector<double> DriverSocket::readAngles()
+{
+	std::vector<double> angles;
+
+	if (connector_->is_connected())
+	{
+		std::string cmd("ANGLES");
+		if (sendCommand(cmd))
+		{
+			std::vector<std::string> feedback = readFeedback(cmd);
+			for (const auto& it : feedback)
+			{
+				angles.push_back(std::stod(it));
+			}
+		}
+	}
+
+	return angles;
+}
+
 int DriverSocket::getState()
 {
 	if (connector_->is_connected())
 	{
-		std::vector<uint8_t> coded = codingCommand("RUN_STATE");
-		int res = connector_->write_n(coded.data(), coded.size());
+		std::string cmd("RUN_STATE");
+		if (sendCommand(cmd))
+		{
+			std::vector<std::string> feedback = readFeedback(cmd);
+			for (const auto& it : feedback)
+			{
+				std::cout << it << std::endl;
+			}
+		}
 	}
 
 	return 0;
+}
+
+bool DriverSocket::sendCommand(const std::string& Command)
+{
+#ifdef DEBUG
+	std::string Command("MOVEJ,1,-123.456,30,90");
+	std::vector<uint8_t> codedDebug = codingCommand(Command);
+	std::cout << "debug coding with length: " << codedDebug.size() << std::endl;
+	for (const auto& it : codedDebug)
+	{
+		std::cout << std::hex << int(it) << ",";
+	}
+	std::cout << std::endl;
+#endif
+	std::vector<uint8_t> coded = codingCommand(Command);
+	return connector_->write_n(coded.data(), coded.size()) == coded.size();
+}
+
+std::vector<std::string> DriverSocket::readFeedback(const std::string& Command)
+{
+	std::vector<std::string> data;
+
+	uint8_t read[128] = { 0 };
+	ssize_t readCount = connector_->read(read, sizeof(read));
+	if (readCount > 0)
+	{
+		auto feedback = decodingFeedback(read);
+		if (feedback.front() == Command)
+		{
+			for (size_t i = 1; i < feedback.size(); ++i)
+			{
+				data.push_back(feedback[i]);
+			}
+		}
+	}
+
+	return data;
 }
 
 std::vector<uint8_t> DriverSocket::codingCommand(const std::string& Command) const
@@ -133,4 +192,27 @@ std::vector<uint8_t> DriverSocket::codingCommand(const std::string& Command) con
 	}
 
 	return coded;
+}
+
+std::vector<std::string> DriverSocket::decodingFeedback(const uint8_t* Data) const
+{
+#ifdef DEBUG
+	for (const auto& it : Data)
+	{
+		std::cout << std::to_string(it) << ",";
+	}
+	std::cout << std::endl;
+#endif
+	size_t dataLength = (uint8_t(Data[0] << 24) | uint8_t(Data[1] << 16) | uint8_t(Data[2] << 8) | Data[3]) - 4;
+	uint32_t crc = uint32_t(Data[dataLength + 4] << 24) | (Data[dataLength + 5] << 16) |
+		(Data[dataLength + 6] << 8) | Data[dataLength + 7];
+	std::string feedback((char*)Data + 4, dataLength);
+	std::uint32_t readCrc = CRC::Calculate(feedback.c_str(), feedback.length(), CRC::CRC_32());
+	if (crc == readCrc)
+	{
+		std::cout << "feedback " << feedback << std::endl;
+		return split(feedback, ",");
+	}
+
+	return std::vector<std::string>();
 }
