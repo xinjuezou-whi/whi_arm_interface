@@ -60,13 +60,19 @@ void DriverSocket::actuate(std::string Command)
 {
 	if (connector_->is_connected())
 	{
-		int res = connector_->write_n(Command.c_str(), Command.length());
+		sendCommand(Command);
 	}
 }
 
 void DriverSocket::cal_angularVel2PwmDuty()
 {
 	// leave for override
+}
+
+uint64_t currentTick()
+{
+	return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 void DriverSocket::setMotor()
@@ -87,6 +93,12 @@ void DriverSocket::setMotor()
 		{
 			std::vector<uint8_t> coded = codingCommand("SERVO");
 			int res = connector_->write_n(coded.data(), coded.size());
+			// give a breathe to arm
+			tick_servo_ = std::make_unique<uint64_t>(currentTick());
+		}
+		else
+		{
+			tick_servo_ = std::make_unique<uint64_t>(0);
 		}
 	}
 	else
@@ -133,6 +145,18 @@ int DriverSocket::getState()
 	return 0;
 }
 
+bool DriverSocket::isServoOn(uint32_t Duration/* = 500*/) const
+{
+	if (tick_servo_)
+	{
+		return currentTick() - *tick_servo_ > Duration;
+	}
+	else
+	{
+		return true;
+	}
+}
+
 bool DriverSocket::sendCommand(const std::string& Command)
 {
 #ifdef DEBUG
@@ -158,7 +182,7 @@ std::vector<std::string> DriverSocket::readFeedback(const std::string& Command)
 	if (readCount > 0)
 	{
 		auto feedback = decodingFeedback(read);
-		if (feedback.front() == Command)
+		if (!feedback.empty() && feedback.front() == Command)
 		{
 			for (size_t i = 1; i < feedback.size(); ++i)
 			{

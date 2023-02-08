@@ -39,6 +39,7 @@ public:
 	void setMotor();
 	std::vector<double> readAngles();
 	int getState();
+	bool isServoOn(uint32_t Duration = 500) const;
 	bool sendCommand(const std::string& Command);
 	std::vector<std::string> readFeedback(const std::string& Command);
 	std::vector<uint8_t> codingCommand(const std::string& Command) const;
@@ -51,4 +52,5 @@ protected:
 	std::string addr_;
 	int port_{ 8888 };
 	std::vector<uint8_t> coded_command_;
+	std::unique_ptr<uint64_t> tick_servo_{ nullptr };
 };
