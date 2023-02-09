@@ -46,6 +46,9 @@ Browse.VC.db-wal
 Browse.VC.opendb
 *.Build.CppClean.log
 *.FileListAbsolute.txt
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
 
 # Directories
 bin
