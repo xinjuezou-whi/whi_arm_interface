@@ -36,7 +36,7 @@ DriverSocket::~DriverSocket()
 	if (connector_->is_connected())
 	{
 		sendCommand("SHUT");
-		usleep(100000);
+		usleep(1000000);
 	}
 }
 
@@ -60,8 +60,7 @@ void DriverSocket::actuate(std::string Command)
 {
 	if (connector_->is_connected())
 	{
-		std::string cmd("MOVEJ,DOF," + Command + ",DOF,99,99,99,99,99,99,DOF,198,198,198,198,198,198,0");
-		sendCommand(cmd);
+		sendCommand(Command);
 	}
 }
 

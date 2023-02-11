@@ -48,22 +48,21 @@ namespace whi_arm_hardware_interface
             sum.pop_back();
             ROS_WARN((std::string("No joints found on parameter server for controller. Name them with:\n") + sum).c_str());
         }
-        node_handle_->param("/chin_arm/hardware_interface/speed_rate", speed_rate_, 25);
-        node_handle_->param("/chin_arm/hardware_interface/acc_duration", acc_duration_, 15);
-        node_handle_->param("/chin_arm/hardware_interface/acc_rate", acc_rate_, 10);
-        node_handle_->param("/chin_arm/hardware_interface/dec_duration", dec_duration_, 20);
-        node_handle_->param("/chin_arm/hardware_interface/dec_rate", dec_rate_, 5);
-        node_handle_->getParam("/chin_arm/hardware_interface/forward_dirs", forward_dirs_);
-        // drivers
-        std::string hardwareStr;
-        node_handle_->param("/chin_arm/hardware_interface/hardware", hardwareStr, std::string(hardware[SOCKET]));
 
+        // drivers
+        node_handle_->getParam("/whi_arm/hardware_interface/forward_dirs", forward_dirs_);
+        node_handle_->param("/whi_arm/hardware_interface/speed_rate", speed_rate_, 50.0);
+        speed_rate_ /= 100.0;
+        node_handle_->getParam("/whi_arm/hardware_interface/angular_velocities", angulars_);
+        node_handle_->getParam("/whi_arm/hardware_interface/angular_accelerations", accelerations_);
+        std::string hardwareStr;
+        node_handle_->param("/whi_arm/hardware_interface/hardware", hardwareStr, std::string(hardware[SOCKET]));
         if (hardwareStr == hardware[SOCKET])
         {
             std::string addr;
             int port;
-            node_handle_->param("/chin_arm/hardware_interface/socket/addr", addr, std::string("192.168.4.44"));
-            node_handle_->param("/chin_arm/hardware_interface/socket/port", port, 8888);
+            node_handle_->param("/whi_arm/hardware_interface/socket/addr", addr, std::string("192.168.4.44"));
+            node_handle_->param("/whi_arm/hardware_interface/socket/port", port, 8888);
             drivers_map_.emplace(name_, std::make_unique<DriverSocket>(name_, addr, port));
             ((DriverSocket*)drivers_map_[name_].get())->setMotor();
         }
@@ -169,7 +168,7 @@ namespace whi_arm_hardware_interface
 #endif
     void ChinHardwareInterface::write(ros::Duration ElapsedTime)
     {
-        if (((DriverSocket*)drivers_map_[name_].get())->isServoOn(1000))
+        if (((DriverSocket*)drivers_map_[name_].get())->isServoOn(2000))
         {
 #ifdef DEBUG
             static int index = 0;
@@ -189,7 +188,24 @@ namespace whi_arm_hardware_interface
                 angles += std::to_string(angles::to_degrees(forward_dirs_[i] * joint_position_command_[i])) + ",";
             }
             angles.pop_back();
+            composeCommand(angles);
             drivers_map_[name_]->actuate(angles);
         }
+    }
+
+    void ChinHardwareInterface::composeCommand(std::string& Command) const
+    {
+        Command.insert(0, "MOVEJ,DOF,");
+        Command += ",DOF,";
+        for (const auto& it : angulars_)
+        {
+            Command += std::to_string(speed_rate_ * it) + ",";
+        }
+        Command += "DOF,";
+        for (const auto& it : accelerations_)
+        {
+            Command += std::to_string(it) + ",";
+        }
+        Command += "0";
     }
 }

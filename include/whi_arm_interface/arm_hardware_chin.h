@@ -31,6 +31,7 @@ namespace whi_arm_hardware_interface
         void update(const ros::TimerEvent& Event);
         void read();
         void write(ros::Duration ElapsedTime);
+        void composeCommand(std::string& Command) const;
 
     protected:
         enum HomingState { STA_TO_HOME = 0, STA_HOMING, STA_HOMED };
@@ -38,11 +39,9 @@ namespace whi_arm_hardware_interface
     protected:
         const std::string name_{ "mega2560" };
         int homing_state_{ STA_HOMED };
-        int speed_rate_{ 25 };
-        int acc_duration_{ 15 };
-        int acc_rate_{ 10 };
-        int dec_duration_{ 20 };
-        int dec_rate_{ 5 };
+        double speed_rate_{ 0.5 };
         std::vector<double> forward_dirs_;
+        std::vector<double> angulars_;
+        std::vector<double> accelerations_;
     };
 }
