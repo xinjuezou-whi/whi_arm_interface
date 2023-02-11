@@ -36,7 +36,7 @@ DriverSocket::~DriverSocket()
 	if (connector_->is_connected())
 	{
 		sendCommand("SHUT");
-		usleep(10000);
+		usleep(100000);
 	}
 }
 
@@ -60,7 +60,8 @@ void DriverSocket::actuate(std::string Command)
 {
 	if (connector_->is_connected())
 	{
-		sendCommand(Command);
+		std::string cmd("MOVEJ,DOF," + Command + ",DOF,99,99,99,99,99,99,DOF,198,198,198,198,198,198,0");
+		sendCommand(cmd);
 	}
 }
 
@@ -234,7 +235,9 @@ std::vector<std::string> DriverSocket::decodingFeedback(const uint8_t* Data) con
 	std::uint32_t readCrc = CRC::Calculate(feedback.c_str(), feedback.length(), CRC::CRC_32());
 	if (crc == readCrc)
 	{
+#ifdef DEBUG
 		std::cout << "feedback " << feedback << std::endl;
+#endif
 		return split(feedback, ",");
 	}
 

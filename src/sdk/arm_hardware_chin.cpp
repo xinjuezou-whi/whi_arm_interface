@@ -15,6 +15,8 @@ All text above must be included in any redistribution.
 #include "whi_arm_interface/arm_hardware_chin.h"
 #include "whi_arm_interface/driver_socket.h"
 
+#include <angles/angles.h>
+
 namespace whi_arm_hardware_interface
 {
     using namespace hardware_interface;
@@ -33,14 +35,14 @@ namespace whi_arm_hardware_interface
         homing_state_ = toHome ? STA_TO_HOME : STA_HOMED;
 
         // joints
-        node_handle_->getParam("/chin_arm/hardware_interface/joints", joint_names_);
+        node_handle_->getParam("/chin_arm/controllers/position/joints", joint_names_);
         if (joint_names_.size() == 0)
         {
             // especially for rosrun mode
             std::string sum;
             for (int i = 0; i < 6; ++i)
             {
-                joint_names_.push_back("joint_" + std::to_string(i + 1));
+                joint_names_.push_back("chin_joint" + std::to_string(i + 1));
                 sum += joint_names_.back() + "\n";
             }
             sum.pop_back();
@@ -51,10 +53,11 @@ namespace whi_arm_hardware_interface
         node_handle_->param("/chin_arm/hardware_interface/acc_rate", acc_rate_, 10);
         node_handle_->param("/chin_arm/hardware_interface/dec_duration", dec_duration_, 20);
         node_handle_->param("/chin_arm/hardware_interface/dec_rate", dec_rate_, 5);
-
+        node_handle_->getParam("/chin_arm/hardware_interface/forward_dirs", forward_dirs_);
         // drivers
         std::string hardwareStr;
         node_handle_->param("/chin_arm/hardware_interface/hardware", hardwareStr, std::string(hardware[SOCKET]));
+
         if (hardwareStr == hardware[SOCKET])
         {
             std::string addr;
@@ -111,13 +114,14 @@ namespace whi_arm_hardware_interface
     void ChinHardwareInterface::read()
     {
         std::vector<double> angles = ((DriverSocket*)drivers_map_[name_].get())->readAngles();
-        for (std::size_t i = 0; i < std::min(joint_position_.size(), angles.size()); ++i)
+        for (std::size_t i = 0; i < 
+            std::min(std::min(joint_position_.size(), angles.size()), forward_dirs_.size()); ++i)
         {
-            joint_position_[i] = angles[i];
+            joint_position_[i] = angles::from_degrees(forward_dirs_[i] * angles[i]);
         }
     }
 
-#ifndef DEBUG
+#ifdef DEBUG
     std::vector<std::string> commands;
     void commandList()
     {
@@ -165,9 +169,9 @@ namespace whi_arm_hardware_interface
 #endif
     void ChinHardwareInterface::write(ros::Duration ElapsedTime)
     {
-        if (((DriverSocket*)drivers_map_[name_].get())->isServoOn())
+        if (((DriverSocket*)drivers_map_[name_].get())->isServoOn(1000))
         {
-#ifndef DEBUG
+#ifdef DEBUG
             static int index = 0;
             if (index == 0)
             {
@@ -180,10 +184,12 @@ namespace whi_arm_hardware_interface
             }
 #endif
             std::string angles;
-            for (std::size_t i = 0; i < joint_position_command_.size(); ++i)
+            for (std::size_t i = 0; i < std::min(forward_dirs_.size(), joint_position_command_.size()); ++i)
             {
-                angles += std::to_string(joint_position_command_[i]) + ",";
+                angles += std::to_string(angles::to_degrees(forward_dirs_[i] * joint_position_command_[i])) + ",";
             }
+            angles.pop_back();
+            drivers_map_[name_]->actuate(angles);
         }
     }
 }

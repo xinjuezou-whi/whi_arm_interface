@@ -6,29 +6,29 @@ chin_arm:
     position:
       type: position_controllers/JointTrajectoryController
       joints:
-        - joint_1
-        - joint_2
-        - joint_3
-        - joint_4
-        - joint_5
-        - joint_6
+        - chin_joint1
+        - chin_joint3
+        - chin_joint6
+        - chin_joint9
+        - chin_joint11
+        - chin_joint13
       constraints:
         goal_time: 0.5
-        joint_1:
+        chin_joint1:
           trajectory: 0.5
           goal: 0.3 #0.4
-        joint_2:
+        chin_joint3:
           trajectory: 1.0 #1.0
           goal: 0.6 #0.65
-        joint_3:
+        chin_joint6:
           trajectory: 1.5 #1.5
           goal: 1.0 #1.0
-        joint_4:
+        chin_joint9:
           trajectory: 0.5
           goal: 0.02
-        joint_5:
-          trajectory: 1.4 #1.5
+        chin_joint11:
+          trajectory: 1.55 #1.5
           goal: 0.7 #0.8
-        joint_6:
+        chin_joint13:
           trajectory: 0.5
           goal: 0.25 #0.2
