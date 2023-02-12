@@ -35,8 +35,11 @@ DriverSocket::~DriverSocket()
 {
 	if (connector_->is_connected())
 	{
-		sendCommand("SHUT");
-		usleep(1000000);
+		for (int i = 0; i < 3; ++i)
+		{
+			sendCommand("SHUT");
+			usleep(200000);
+		}
 	}
 }
 
@@ -75,8 +78,9 @@ uint64_t currentTick()
 		std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-void DriverSocket::setMotor()
+void DriverSocket::setMotor(uint32_t ResponseLength)
 {
+	response_length_ = ResponseLength;
 	if (connector_->is_connected())
 	{
 		bool servoOn = false;
@@ -177,11 +181,11 @@ std::vector<std::string> DriverSocket::readFeedback(const std::string& Command)
 {
 	std::vector<std::string> data;
 
-	uint8_t read[128] = { 0 };
+	uint8_t read[response_length_] = { 0 };
 	ssize_t readCount = connector_->read(read, sizeof(read));
 	if (readCount > 0)
 	{
-		auto feedback = decodingFeedback(read);
+		auto feedback = decodingFeedback(read, sizeof(read));
 		if (!feedback.empty() && feedback.front() == Command)
 		{
 			for (size_t i = 1; i < feedback.size(); ++i)
@@ -218,7 +222,7 @@ std::vector<uint8_t> DriverSocket::codingCommand(const std::string& Command) con
 	return coded;
 }
 
-std::vector<std::string> DriverSocket::decodingFeedback(const uint8_t* Data) const
+std::vector<std::string> DriverSocket::decodingFeedback(const uint8_t* Data, size_t Length) const
 {
 #ifdef DEBUG
 	for (const auto& it : Data)
@@ -228,16 +232,19 @@ std::vector<std::string> DriverSocket::decodingFeedback(const uint8_t* Data) con
 	std::cout << std::endl;
 #endif
 	size_t dataLength = (uint8_t(Data[0] << 24) | uint8_t(Data[1] << 16) | uint8_t(Data[2] << 8) | Data[3]) - 4;
-	uint32_t crc = uint32_t(Data[dataLength + 4] << 24) | (Data[dataLength + 5] << 16) |
-		(Data[dataLength + 6] << 8) | Data[dataLength + 7];
-	std::string feedback((char*)Data + 4, dataLength);
-	std::uint32_t readCrc = CRC::Calculate(feedback.c_str(), feedback.length(), CRC::CRC_32());
-	if (crc == readCrc)
+	if (dataLength < Length)
 	{
+		uint32_t crc = uint32_t(Data[dataLength + 4] << 24) | (Data[dataLength + 5] << 16) |
+			(Data[dataLength + 6] << 8) | Data[dataLength + 7];
+		std::string feedback((char*)Data + 4, dataLength);
+		std::uint32_t readCrc = CRC::Calculate(feedback.c_str(), feedback.length(), CRC::CRC_32());
+		if (crc == readCrc)
+		{
 #ifdef DEBUG
-		std::cout << "feedback " << feedback << std::endl;
+			std::cout << "feedback " << feedback << std::endl;
 #endif
-		return split(feedback, ",");
+			return split(feedback, ",");
+		}
 	}
 
 	return std::vector<std::string>();

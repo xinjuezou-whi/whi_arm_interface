@@ -61,10 +61,12 @@ namespace whi_arm_hardware_interface
         {
             std::string addr;
             int port;
+            int dataLength;
             node_handle_->param("/whi_arm/hardware_interface/socket/addr", addr, std::string("192.168.4.44"));
             node_handle_->param("/whi_arm/hardware_interface/socket/port", port, 8888);
+            node_handle_->param("/whi_arm/hardware_interface/socket/response_length", dataLength, 128);
             drivers_map_.emplace(name_, std::make_unique<DriverSocket>(name_, addr, port));
-            ((DriverSocket*)drivers_map_[name_].get())->setMotor();
+            ((DriverSocket*)drivers_map_[name_].get())->setMotor(dataLength);
         }
         else
         {
@@ -112,11 +114,14 @@ namespace whi_arm_hardware_interface
 
     void ChinHardwareInterface::read()
     {
-        std::vector<double> angles = ((DriverSocket*)drivers_map_[name_].get())->readAngles();
-        for (std::size_t i = 0; i < 
-            std::min(std::min(joint_position_.size(), angles.size()), forward_dirs_.size()); ++i)
+        if (((DriverSocket*)drivers_map_[name_].get())->isServoOn(3000))
         {
-            joint_position_[i] = angles::from_degrees(forward_dirs_[i] * angles[i]);
+            std::vector<double> angles = ((DriverSocket*)drivers_map_[name_].get())->readAngles();
+            for (std::size_t i = 0; i < 
+                std::min(std::min(joint_position_.size(), angles.size()), forward_dirs_.size()); ++i)
+            {
+                joint_position_[i] = angles::from_degrees(forward_dirs_[i] * angles[i]);
+            }
         }
     }
 
