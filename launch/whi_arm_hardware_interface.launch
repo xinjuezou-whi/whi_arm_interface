@@ -4,6 +4,8 @@
   <arg name="home" default="false"/>
   <arg name="close_loop" default="true"/>
   <arg name="arm" default="chin"/>
+  <!--<arg name="type" default=""/>-->
+  <arg name="type" default="_frame"/>
   <arg name="description_pkg" default="$(eval '$(find ' + arg('arm') + '_description)')"/>
   <arg name="config_pkg" default="$(eval '$(find ' + arg('arm') + '_moveit_config)')"/>
 
@@ -15,7 +17,7 @@
   <rosparam file="$(arg config_pkg)/config/joint_limits.yaml" command="load" ns="chin"/>
 
   <!-- Load universal robot description format (URDF) -->
-  <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg description_pkg)/urdf/$(arg arm)_arm.urdf.xacro"/>
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg description_pkg)/urdf/$(arg arm)_arm$(arg type).urdf.xacro"/>
 
   <!-- The semantic description that corresponds to the URDF -->
   <param name="robot_description_semantic" textfile="$(arg config_pkg)/config/$(arg arm)_arm.srdf"/>
