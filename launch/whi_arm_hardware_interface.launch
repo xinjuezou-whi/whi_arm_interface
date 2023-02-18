@@ -4,20 +4,19 @@
   <arg name="home" default="false"/>
   <arg name="close_loop" default="true"/>
   <arg name="arm" default="chin"/>
-  <!--<arg name="type" default=""/>-->
-  <arg name="type" default="_frame"/>
-  <arg name="description_pkg" default="$(eval '$(find ' + arg('arm') + '_description)')"/>
-  <arg name="config_pkg" default="$(eval '$(find ' + arg('arm') + '_moveit_config)')"/>
+  <arg name="arm_model" default="frame"/>
+  <arg name="description_pkg" default="$(eval '$(find ' + arg('arm') + '_' + arg('arm_model') + '_description)')"/>
+  <arg name="config_pkg" default="$(eval '$(find ' + arg('arm') + '_' + arg('arm_model') + '_moveit_config)')"/>
 
   <!-- params -->
   <rosparam file="$(find whi_arm_interface)/config/hardware_$(arg arm).yaml" command="load"/>
-  <rosparam file="$(find whi_arm_interface)/config/controllers_$(arg arm).yaml" command="load"/>
+  <rosparam file="$(find whi_arm_interface)/config/controllers_$(arg arm)_$(arg arm_model).yaml" command="load"/>
 
   <!-- Load moveit joint limits config in separate namespace to get velocity limits -->
   <rosparam file="$(arg config_pkg)/config/joint_limits.yaml" command="load" ns="chin"/>
 
   <!-- Load universal robot description format (URDF) -->
-  <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg description_pkg)/urdf/$(arg arm)_arm$(arg type).urdf.xacro"/>
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg description_pkg)/urdf/$(arg arm)_$(arg arm_model).urdf.xacro"/>
 
   <!-- The semantic description that corresponds to the URDF -->
   <param name="robot_description_semantic" textfile="$(arg config_pkg)/config/$(arg arm)_arm.srdf"/>

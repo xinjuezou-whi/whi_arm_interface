@@ -1,0 +1,34 @@
+chin_arm:
+  controllers:
+    state:
+      type: joint_state_controller/JointStateController
+      publish_rate: 100
+    position:
+      type: position_controllers/JointTrajectoryController
+      joints:
+        - chin_joint_1 #1
+        - chin_joint_2 #3
+        - chin_joint_3 #6
+        - chin_joint_4 #9
+        - chin_joint_5 #11
+        - chin_joint_6 #13
+      constraints:
+        goal_time: 0.5
+        chin_joint1:
+          trajectory: 0.5
+          goal: 0.3 #0.4
+        chin_joint3:
+          trajectory: 1.0 #1.0
+          goal: 0.6 #0.65
+        chin_joint6:
+          trajectory: 1.5 #1.5
+          goal: 1.0 #1.0
+        chin_joint9:
+          trajectory: 0.5
+          goal: 0.02
+        chin_joint11:
+          trajectory: 1.55 #1.5
+          goal: 0.7 #0.8
+        chin_joint13:
+          trajectory: 0.5
+          goal: 0.25 #0.2

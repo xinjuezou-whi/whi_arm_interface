@@ -6,12 +6,12 @@ chin_arm:
     position:
       type: position_controllers/JointTrajectoryController
       joints:
-        - chin_joint1
-        - chin_joint3
-        - chin_joint6
-        - chin_joint9
-        - chin_joint11
-        - chin_joint13
+        - chin_joint_1
+        - chin_joint_3
+        - chin_joint_6
+        - chin_joint_9
+        - chin_joint_11
+        - chin_joint_13
       constraints:
         goal_time: 0.5
         chin_joint1:
