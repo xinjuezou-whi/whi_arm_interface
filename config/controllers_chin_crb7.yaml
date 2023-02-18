@@ -15,20 +15,20 @@ chin_arm:
       constraints: # checking if following values are set being greater than 0.0
         goal_time: 0.5 # 0.5 sec
         chin_joint_1:
-          trajectory: 1.0 # 0.5 rad 
+          trajectory: 1.5 # 0.5 rad 
           goal: 1.5 # 0.02 rad
         chin_joint_2:
-          trajectory: 1.0
-          goal: 1.0
+          trajectory: 1.5
+          goal: 1.5
         chin_joint_3:
           trajectory: 2.5
           goal: 2.0
         chin_joint_4:
-          trajectory: 1.5
-          goal: 1.0
+          trajectory: 2.5
+          goal: 2.5
         chin_joint_5:
           trajectory: 2.5
           goal: 2.0
         chin_joint_6:
-          trajectory: 1.5
-          goal: 0.5
+          trajectory: 2.5
+          goal: 2.0
