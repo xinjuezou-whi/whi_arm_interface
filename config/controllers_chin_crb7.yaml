@@ -27,7 +27,7 @@ chin_arm:
           trajectory: 2.5
           goal: 2.5
         chin_joint_5:
-          trajectory: 2.5
+          trajectory: 3.0
           goal: 2.0
         chin_joint_6:
           trajectory: 2.5
