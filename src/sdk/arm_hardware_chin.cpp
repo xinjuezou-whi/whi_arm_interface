@@ -126,6 +126,7 @@ namespace whi_arm_hardware_interface
     }
 
 #ifdef DEBUG
+    // following commands refer to demo.py of Chin
     std::vector<std::string> commands;
     void commandList()
     {
@@ -195,6 +196,14 @@ namespace whi_arm_hardware_interface
             angles.pop_back();
             composeCommand(angles);
             drivers_map_[name_]->actuate(angles);
+#ifdef DEBUG
+            std::cout << "velocity command:" << std::endl;
+            for (const auto& it : joint_velocity_command_)
+            {
+                std::cout << it << ",";
+            }
+            std::cout << std::endl;
+#endif
         }
     }
 
