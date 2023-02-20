@@ -31,7 +31,7 @@
   </node>
 
   <!-- rosserial server -->
-  <group if="$(eval arg('arm') == 'ar2')">
+  <group if="$(eval arg('arm') == 'ar')">
     <node pkg="rosserial_python" name="serial_node" type="serial_node.py" output="screen">
       <param name="~port" value="/dev/ttyACM0"/>
       <param name="~baud" value="115200"/>
