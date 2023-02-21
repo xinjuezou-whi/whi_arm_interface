@@ -12,7 +12,7 @@ GNU General Public License, check LICENSE for more information.
 All text above must be included in any redistribution.
 
 ******************************************************************/
-#include "whi_arm_interface/arm_hardware_ar2.h"
+#include "whi_arm_interface/arm_hardware_ar.h"
 #include "whi_arm_interface/driver_serial.h"
 #include "whi_arm_interface/driver_rosserial.h"
 
@@ -24,13 +24,13 @@ namespace whi_arm_hardware_interface
 {
 	using namespace hardware_interface;
 
-    Ar2HardwareInterface::Ar2HardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle)
+    ArHardwareInterface::ArHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle)
         : ArmHardware(NodeHandle)
     {
         init();
     }
 
-    void Ar2HardwareInterface::init()
+    void ArHardwareInterface::init()
     {
         ros::NodeHandle nh_private("~");
         bool toHome;
@@ -39,7 +39,7 @@ namespace whi_arm_hardware_interface
         nh_private.param("close_loop", mode_close_loop_, true);
 
         // joints
-        node_handle_->getParam("/ar2_arm/hardware_interface/joints", joint_names_);
+        node_handle_->getParam("/ar_arm/controllers/position/joints", joint_names_);
         if (joint_names_.size() == 0)
         {
             // especially for rosrun mode
@@ -52,21 +52,21 @@ namespace whi_arm_hardware_interface
             sum.pop_back();
             ROS_WARN((std::string("No joints found on parameter server for controller. Name them with:\n") + sum).c_str());
         }
-        node_handle_->getParam("/ar2_arm/hardware_interface/steps_per_degree/", steps_per_deg_);
-        node_handle_->getParam("/ar2_arm/hardware_interface/forward_dir/", forward_dir_);
-        node_handle_->getParam("/ar2_arm/hardware_interface/limits_dir/", limits_dir_);
-        node_handle_->getParam("/ar2_arm/hardware_interface/home_offsets/", home_offsets_);
-        node_handle_->getParam("/ar2_arm/hardware_interface/home_kinematics/", home_kinematics_);
+        node_handle_->getParam("/ar_arm/hardware_interface/steps_per_degree/", steps_per_deg_);
+        node_handle_->getParam("/ar_arm/hardware_interface/forward_dir/", forward_dir_);
+        node_handle_->getParam("/ar_arm/hardware_interface/limits_dir/", limits_dir_);
+        node_handle_->getParam("/ar_arm/hardware_interface/home_offsets/", home_offsets_);
+        node_handle_->getParam("/ar_arm/hardware_interface/home_kinematics/", home_kinematics_);
         for (std::size_t i = 0; i < joint_names_.size(); ++i)
         {
             // A B C D E F...
             axes_prefix_.push_back(char(65 + i));
         }
-        node_handle_->param("/ar2_arm/hardware_interface/speed_rate", speed_rate_, 25);
-        node_handle_->param("/ar2_arm/hardware_interface/acc_duration", acc_duration_, 15);
-        node_handle_->param("/ar2_arm/hardware_interface/acc_rate", acc_rate_, 10);
-        node_handle_->param("/ar2_arm/hardware_interface/dec_duration", dec_duration_, 20);
-        node_handle_->param("/ar2_arm/hardware_interface/dec_rate", dec_rate_, 5);
+        node_handle_->param("/ar_arm/hardware_interface/speed_rate", speed_rate_, 25);
+        node_handle_->param("/ar_arm/hardware_interface/acc_duration", acc_duration_, 15);
+        node_handle_->param("/ar_arm/hardware_interface/acc_rate", acc_rate_, 10);
+        node_handle_->param("/ar_arm/hardware_interface/dec_duration", dec_duration_, 20);
+        node_handle_->param("/ar_arm/hardware_interface/dec_rate", dec_rate_, 5);
 
         // drivers
         std::string hardwareStr;
@@ -74,10 +74,10 @@ namespace whi_arm_hardware_interface
         if (hardwareStr == hardware[ROSSERIAL])
         {
             std::string topic;
-            node_handle_->param("/ar2_arm/hardware_interface/rosserial/topic", topic, std::string("/arm_hardware_interface"));
+            node_handle_->param("/ar_arm/hardware_interface/rosserial/topic", topic, std::string("/arm_hardware_interface"));
             drivers_map_.emplace(name_, std::make_unique<DriverRosserial>(name_, node_handle_, topic));
             ((DriverRosserial*)drivers_map_[name_].get())->setMotor(limits_dir_);
-            ((DriverRosserial*)drivers_map_[name_].get())->registerResponse(std::bind(&Ar2HardwareInterface::callbackResponse, this, std::placeholders::_1));
+            ((DriverRosserial*)drivers_map_[name_].get())->registerResponse(std::bind(&ArHardwareInterface::callbackResponse, this, std::placeholders::_1));
         }
         else if (hardwareStr == hardware[SERIAL])
         {
@@ -85,8 +85,8 @@ namespace whi_arm_hardware_interface
             // therefore init one serial instance
             std::string port;
             int baudrate = -1;
-            if (node_handle_->param("/ar2_arm/hardware_interface/serial/port", port, std::string()) &&
-                node_handle_->param("/ar2_arm/hardware_interface/serial/baudrate", baudrate, -1))
+            if (node_handle_->param("/ar_arm/hardware_interface/serial/port", port, std::string()) &&
+                node_handle_->param("/ar_arm/hardware_interface/serial/baudrate", baudrate, -1))
             {
                 try
                 {
@@ -134,13 +134,13 @@ namespace whi_arm_hardware_interface
         registerInterface(&position_joint_interface_);
 
         // controller
-        node_handle_->param("/ar2_arm/hardware_interface/loop_hz", loop_hz_, 10.0);
+        node_handle_->param("/ar_arm/hardware_interface/loop_hz", loop_hz_, 10.0);
         controller_manager_ = std::make_unique<controller_manager::ControllerManager>(this, *node_handle_);
         ros::Duration updateFreq = ros::Duration(1.0 / loop_hz_);
-        non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(updateFreq, std::bind(&Ar2HardwareInterface::update, this, std::placeholders::_1)));
+        non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(updateFreq, std::bind(&ArHardwareInterface::update, this, std::placeholders::_1)));
     }
 
-    void Ar2HardwareInterface::update(const ros::TimerEvent& Event)
+    void ArHardwareInterface::update(const ros::TimerEvent& Event)
     {
         elapsed_time_ = ros::Duration(Event.current_real - Event.last_real);
         read();
@@ -148,12 +148,12 @@ namespace whi_arm_hardware_interface
         write(elapsed_time_);
     }
 
-    void Ar2HardwareInterface::read()
+    void ArHardwareInterface::read()
     {
         // do nothing, since the position is updated by message callback
     }
 
-    void Ar2HardwareInterface::write(ros::Duration ElapsedTime)
+    void ArHardwareInterface::write(ros::Duration ElapsedTime)
     {
         /// rosserial
         if (homing_state_ == STA_HOMED)
@@ -207,7 +207,7 @@ namespace whi_arm_hardware_interface
         }
     }
 
-    void Ar2HardwareInterface::callbackResponse(const std::string& State)
+    void ArHardwareInterface::callbackResponse(const std::string& State)
     {
         if (State.find("homing") != std::string::npos)
         {

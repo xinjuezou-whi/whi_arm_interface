@@ -1,4 +1,4 @@
-ar2_arm:
+ar_arm:
   controllers:
     state:
       type: joint_state_controller/JointStateController

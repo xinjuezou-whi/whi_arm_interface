@@ -1,9 +1,9 @@
 /******************************************************************
-arm hardware interface of ar2 under ROS 1
+arm hardware interface of ar series under ROS 1
 it is a hardware resouces layer for ros_controller
 
 Features:
-- ar2 hardware interfaces
+- currently for ar2 hardware interfaces
 - xxx
 
 Written by Xinjue Zou, xinjue.zou@outlook.com
@@ -22,11 +22,11 @@ Changelog:
 
 namespace whi_arm_hardware_interface
 {
-    class Ar2HardwareInterface : public ArmHardware
+    class ArHardwareInterface : public ArmHardware
     {
     public:
-        Ar2HardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle);
-        ~Ar2HardwareInterface() = default;
+        ArHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle);
+        ~ArHardwareInterface() = default;
 
     protected:
         void init();
