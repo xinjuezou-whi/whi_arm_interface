@@ -38,6 +38,7 @@ public:
 	// specific
 	void setMotor(uint32_t ResponseLength);
 	std::vector<double> readAngles();
+	std::vector<double> readVelocities();
 	int getState();
 	bool isServoOn(uint32_t Duration = 500) const;
 	bool sendCommand(const std::string& Command);

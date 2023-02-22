@@ -128,6 +128,13 @@ namespace whi_arm_hardware_interface
             {
                 joint_position_[i] = angles::from_degrees(forward_dirs_[i] * angles[i]);
             }
+            std::vector<double> velocities = ((DriverSocket*)drivers_map_[name_].get())->readVelocities();
+            for (std::size_t i = 0; i < 
+                std::min(joint_position_.size(), velocities.size()); ++i)
+            {
+                joint_velocity_[i] = angles::from_degrees(velocities[i]);
+            }
+            // there's no acceleration data available in a joint handle
         }
     }
 

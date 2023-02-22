@@ -131,6 +131,26 @@ std::vector<double> DriverSocket::readAngles()
 	return angles;
 }
 
+std::vector<double> DriverSocket::readVelocities()
+{
+	std::vector<double> velocities;
+
+	if (connector_->is_connected())
+	{
+		std::string cmd("DANGLES");
+		if (sendCommand(cmd))
+		{
+			std::vector<std::string> feedback = readFeedback(cmd);
+			for (const auto& it : feedback)
+			{
+				velocities.push_back(std::stod(it));
+			}
+		}
+	}
+
+	return velocities;
+}
+
 int DriverSocket::getState()
 {
 	if (connector_->is_connected())
