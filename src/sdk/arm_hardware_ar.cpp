@@ -125,11 +125,10 @@ namespace whi_arm_hardware_interface
             JointStateHandle jointStateHandle(joint_names_[i], &joint_position_[i], &joint_velocity_[i], &joint_effort_[i]);
             joint_state_interface_.registerHandle(jointStateHandle);
 
-            // create velocity joint interface
+            // create joint command interface: position
             JointHandle jointPositionHandle(jointStateHandle, &joint_position_command_[i]);
             position_joint_interface_.registerHandle(jointPositionHandle);
         }
-
         registerInterface(&joint_state_interface_);
         registerInterface(&position_joint_interface_);
 
