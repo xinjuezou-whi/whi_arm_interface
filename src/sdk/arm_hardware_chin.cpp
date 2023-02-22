@@ -77,7 +77,6 @@ namespace whi_arm_hardware_interface
         num_joints_ = joint_names_.size();
         joint_position_.resize(num_joints_);
         joint_velocity_.resize(num_joints_);
-        joint_acceleration_.resize(num_joints_);
         joint_effort_.resize(num_joints_);
         joint_position_command_.resize(num_joints_);
         joint_velocity_command_.resize(num_joints_);

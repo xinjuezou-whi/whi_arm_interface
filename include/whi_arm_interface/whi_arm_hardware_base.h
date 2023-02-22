@@ -64,7 +64,6 @@ namespace whi_arm_hardware_interface
 		std::vector<int> joint_types_;
 		std::vector<double> joint_position_;
 		std::vector<double> joint_velocity_;
-		std::vector<double> joint_acceleration_;
 		std::vector<double> joint_effort_;
 		std::vector<double> joint_position_command_;
 		std::vector<double> joint_velocity_command_;
