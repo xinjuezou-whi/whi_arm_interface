@@ -3,7 +3,7 @@ chin_arm:
     state:
       type: joint_state_controller/JointStateController
       publish_rate: 100
-    position:
+    command:
       type: position_controllers/JointTrajectoryController
       joints:
         - chin_joint_1

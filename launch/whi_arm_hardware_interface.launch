@@ -41,5 +41,5 @@
   <!-- Start controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="/" 
         args="/$(arg arm)_arm/controllers/state
-	          /$(arg arm)_arm/controllers/position"/>
+	          /$(arg arm)_arm/controllers/command"/>
 </launch>

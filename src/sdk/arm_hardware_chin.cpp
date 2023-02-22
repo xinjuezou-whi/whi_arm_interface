@@ -35,7 +35,7 @@ namespace whi_arm_hardware_interface
         homing_state_ = toHome ? STA_TO_HOME : STA_HOMED;
 
         // joints
-        node_handle_->getParam("/chin_arm/controllers/position/joints", joint_names_);
+        node_handle_->getParam("/chin_arm/controllers/command/joints", joint_names_);
         if (joint_names_.size() == 0)
         {
             // especially for rosrun mode
