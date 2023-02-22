@@ -32,6 +32,7 @@ namespace whi_arm_hardware_interface
         void read();
         void write(ros::Duration ElapsedTime);
         void composeCommand(std::string& Command) const;
+        std::string composeCommand(std::string& Positions, std::string& Velocities, std::string& Accelerations) const;
 
     protected:
         enum HomingState { STA_TO_HOME = 0, STA_HOMING, STA_HOMED };

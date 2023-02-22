@@ -22,6 +22,7 @@ Changelog:
 #include <hardware_interface/robot_hw.h>
 #include <hardware_interface/joint_state_interface.h>
 #include <hardware_interface/joint_command_interface.h>
+#include <hardware_interface/posvelacc_command_interface.h>
 #include <joint_limits_interface/joint_limits.h>
 #include <joint_limits_interface/joint_limits_interface.h>
 #include <joint_limits_interface/joint_limits_rosparam.h>
@@ -51,6 +52,8 @@ namespace whi_arm_hardware_interface
 		hardware_interface::JointStateInterface joint_state_interface_;
 		/// joint command interface: position
 		hardware_interface::PositionJointInterface position_joint_interface_;
+		/// joint command interface: position, velocity, and acceleration
+		hardware_interface::PosVelAccJointInterface pos_vel_acc_joint_interface_;
 		/// joint limit interfaces
 		joint_limits_interface::PositionJointSaturationInterface position_joint_saturation_interface_;
 		joint_limits_interface::PositionJointSoftLimitsInterface position_joint_limits_interface_;
@@ -61,9 +64,11 @@ namespace whi_arm_hardware_interface
 		std::vector<int> joint_types_;
 		std::vector<double> joint_position_;
 		std::vector<double> joint_velocity_;
+		std::vector<double> joint_acceleration_;
 		std::vector<double> joint_effort_;
 		std::vector<double> joint_position_command_;
 		std::vector<double> joint_velocity_command_;
+		std::vector<double> joint_acceleration_command_;
 		std::vector<double> joint_effort_command_;
 		std::vector<double> joint_lower_limits_;
 		std::vector<double> joint_upper_limits_;
