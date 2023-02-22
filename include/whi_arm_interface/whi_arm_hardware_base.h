@@ -1,6 +1,6 @@
 /******************************************************************
 arm hardware interface under ROS 1
-it is a hardware resouces layer for ros_controller
+it is a hardware resouces layer for ros_control
 
 Features:
 - abstract arm hardware interfaces
@@ -47,10 +47,11 @@ namespace whi_arm_hardware_interface
 		ros::Duration elapsed_time_;
 		double loop_hz_{ 10.0 };
 
-		/// interfaces
+		/// joint state interface
 		hardware_interface::JointStateInterface joint_state_interface_;
+		/// joint command interface: position
 		hardware_interface::PositionJointInterface position_joint_interface_;
-
+		/// joint limit interfaces
 		joint_limits_interface::PositionJointSaturationInterface position_joint_saturation_interface_;
 		joint_limits_interface::PositionJointSoftLimitsInterface position_joint_limits_interface_;
 
