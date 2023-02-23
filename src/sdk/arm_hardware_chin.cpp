@@ -84,23 +84,36 @@ namespace whi_arm_hardware_interface
         joint_effort_command_.resize(num_joints_);
 
         // initialize controller
+        node_handle_->param("/chin_arm/controllers/command/type", controller_type_, std::string(""));
         for (std::size_t i = 0; i < num_joints_; ++i)
         {
             // create joint state interface
             JointStateHandle jointStateHandle(joint_names_[i], &joint_position_[i], &joint_velocity_[i], &joint_effort_[i]);
             joint_state_interface_.registerHandle(jointStateHandle);
 
-            // create joint command interface: position
-            //JointHandle jointPositionHandle(jointStateHandle, &joint_position_command_[i]);
-            //position_joint_interface_.registerHandle(jointPositionHandle);
-            // create joint command interface: position, velocity, acceleration
-            PosVelAccJointHandle jointPosVelAccHandle(jointStateHandle,
-                &joint_position_command_[i], &joint_velocity_command_[i], &joint_acceleration_command_[i]);
-            pos_vel_acc_joint_interface_.registerHandle(jointPosVelAccHandle);
+            if (controller_type_.find("position_controllers") != std::string::npos)
+            {
+                // create joint command interface: position
+                JointHandle jointPositionHandle(jointStateHandle, &joint_position_command_[i]);
+                position_joint_interface_.registerHandle(jointPositionHandle);
+            }
+            else if (controller_type_.find("pos_vel_acc_controllers") != std::string::npos)
+            {
+                // create joint command interface: position, velocity, acceleration
+                PosVelAccJointHandle jointPosVelAccHandle(jointStateHandle,
+                    &joint_position_command_[i], &joint_velocity_command_[i], &joint_acceleration_command_[i]);
+                pos_vel_acc_joint_interface_.registerHandle(jointPosVelAccHandle);
+            }
         }
         registerInterface(&joint_state_interface_);
-        //registerInterface(&position_joint_interface_);
-        registerInterface(&pos_vel_acc_joint_interface_);
+        if (controller_type_.find("position_controllers") != std::string::npos)
+        {
+            registerInterface(&position_joint_interface_);
+        }
+        else if (controller_type_.find("pos_vel_acc_controllers") != std::string::npos)
+        {
+            registerInterface(&pos_vel_acc_joint_interface_);
+        }
 
         // controller
         node_handle_->param("/whi_arm/hardware_interface/loop_hz", loop_hz_, 10.0);
@@ -121,18 +134,28 @@ namespace whi_arm_hardware_interface
     {
         if (((DriverSocket*)drivers_map_[name_].get())->isServoOn(3000))
         {
-            std::vector<double> angles = ((DriverSocket*)drivers_map_[name_].get())->readAngles();
+            std::vector<std::string> params { "ANGLES", "DANGLES" };
+            ((DriverSocket*)drivers_map_[name_].get())->request(params);
+            std::vector<double> angles = ((DriverSocket*)drivers_map_[name_].get())->readParam(params[0]);
             for (std::size_t i = 0; i < 
                 std::min(std::min(joint_position_.size(), angles.size()), forward_dirs_.size()); ++i)
             {
                 joint_position_[i] = angles::from_degrees(forward_dirs_[i] * angles[i]);
             }
-            std::vector<double> velocities = ((DriverSocket*)drivers_map_[name_].get())->readVelocities();
+            std::vector<double> velocities = ((DriverSocket*)drivers_map_[name_].get())->readParam(params[1]);
             for (std::size_t i = 0; i < 
-                std::min(joint_position_.size(), velocities.size()); ++i)
+                std::min(std::min(joint_velocity_.size(), velocities.size()), forward_dirs_.size()); ++i)
             {
-                joint_velocity_[i] = angles::from_degrees(velocities[i]);
+                joint_velocity_[i] = angles::from_degrees(forward_dirs_[i] * velocities[i]);
             }
+#ifdef DEBUG
+            std::cout << "velocity read" << std::endl;
+            for (const auto& it : joint_velocity_)
+            {
+                std::cout << it << ",";
+            }
+            std::cout << std::endl;
+#endif
             // there's no acceleration data available in a joint handle
         }
     }
@@ -206,50 +229,57 @@ namespace whi_arm_hardware_interface
                 positions += std::to_string(angles::to_degrees(forward_dirs_[i] * joint_position_command_[i])) + ",";
             }
             positions.pop_back();
-            std::string angulars;
-            for (std::size_t i = 0; i < joint_velocity_command_.size(); ++i)
+            if (controller_type_.find("position_controllers") != std::string::npos)
             {
-                angulars += std::to_string(angles::to_degrees(joint_velocity_command_[i])) + ",";
+                drivers_map_[name_]->actuate(composeCommand(positions));
             }
-            angulars.pop_back();
-            std::string accelerations;
-            for (std::size_t i = 0; i < joint_acceleration_command_.size(); ++i)
+            else if (controller_type_.find("pos_vel_acc_controllers") != std::string::npos)
             {
-                accelerations += std::to_string(angles::to_degrees(joint_acceleration_command_[i])) + ",";
-            }
-            accelerations.pop_back();
-            //composeCommand(positions);
-            //drivers_map_[name_]->actuate(positions);
-            drivers_map_[name_]->actuate(composeCommand(positions, angulars, accelerations));
+                std::string angulars;
+                for (std::size_t i = 0; i < joint_velocity_command_.size(); ++i)
+                {
+                    angulars += std::to_string(angles::to_degrees(fabs(joint_velocity_command_[i]))) + ",";
+                }
+                angulars.pop_back();
+                std::string accelerations;
+                for (std::size_t i = 0; i < joint_acceleration_command_.size(); ++i)
+                {
+                    accelerations += std::to_string(angles::to_degrees(fabs(joint_acceleration_command_[i]))) + ",";
+                }
+                accelerations.pop_back();
+
+                drivers_map_[name_]->actuate(composeCommand(positions, angulars, accelerations));
 #ifdef DEBUG
-            std::cout << "velocity command:" << std::endl;
-            for (const auto& it : joint_velocity_command_)
-            {
-                std::cout << it << ",";
-            }
-            std::cout << std::endl;
+                std::cout << "velocity command:" << std::endl;
+                for (const auto& it : joint_velocity_command_)
+                {
+                    std::cout << it << ",";
+                }
+                std::cout << std::endl;
 #endif
+            }
         }
     }
 
-    void ChinHardwareInterface::composeCommand(std::string& Command) const
+    std::string ChinHardwareInterface::composeCommand(const std::string& Command) const
     {
-        Command.insert(0, "MOVEJ,DOF,");
-        Command += ",DOF,";
+        std::string command("MOVEJ,DOF," + Command + ",DOF,");
         for (const auto& it : angulars_)
         {
-            Command += std::to_string(speed_rate_ * it) + ",";
+            command += std::to_string(speed_rate_ * it) + ",";
         }
-        Command += "DOF,";
+        command += "DOF,";
         for (const auto& it : accelerations_)
         {
-            Command += std::to_string(it) + ",";
+            command += std::to_string(it) + ",";
         }
-        Command += "0";
+        command += "0";
+
+        return command;
     }
 
-    std::string ChinHardwareInterface::composeCommand(
-        std::string& Positions, std::string& Velocities, std::string& Accelerations) const
+    std::string ChinHardwareInterface::composeCommand(const std::string& Positions, const std::string& Velocities,
+        const std::string& Accelerations) const
     {
         return std::string("MOVEJ,DOF," + Positions + ",DOF," + Velocities + ",DOF," + Accelerations + ",0");
     }

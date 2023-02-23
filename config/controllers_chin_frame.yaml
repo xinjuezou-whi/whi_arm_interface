@@ -1,5 +1,6 @@
 chin_arm:
   controllers:
+    stop_trajectory_duration: 0.5 # sec
     state:
       type: joint_state_controller/JointStateController
       publish_rate: 100
@@ -14,6 +15,7 @@ chin_arm:
         - chin_joint_13
       constraints: # checking if following values are set being greater than 0.0
         goal_time: 0.5 # 0.5 sec
+        stopped_velocity_tolerance: 0.5 # 0.01 sec
         chin_joint_1:
           trajectory: 0.5 # 0.5 rad
           goal: 0.3 # 0.02 rad
@@ -24,11 +26,11 @@ chin_arm:
           trajectory: 1.5 #1.5
           goal: 1.0 #1.0
         chin_joint_9:
-          trajectory: 0.5
-          goal: 0.02
+          trajectory: 1.5
+          goal: 1.0
         chin_joint_11:
           trajectory: 1.55 #1.5
-          goal: 0.7 #0.8
+          goal: 1.5 #0.8
         chin_joint_13:
           trajectory: 0.5
           goal: 0.25 #0.2

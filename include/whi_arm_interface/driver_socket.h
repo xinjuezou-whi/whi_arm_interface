@@ -37,18 +37,21 @@ public:
 public:
 	// specific
 	void setMotor(uint32_t ResponseLength);
-	std::vector<double> readAngles();
-	std::vector<double> readVelocities();
+	void request(const std::vector<std::string>& Params);
+	std::vector<double> readParam(std::string& Param);
 	int getState();
 	bool isServoOn(uint32_t Duration = 500) const;
 	bool sendCommand(const std::string& Command);
-	std::vector<std::string> readFeedback(const std::string& Command);
+	std::vector<std::string> readFeedback();
 	std::vector<uint8_t> codingCommand(const std::string& Command) const;
 	std::vector<std::string> decodingFeedback(const uint8_t* Data, size_t Length) const;
 
 protected:
 	std::unique_ptr<sockpp::tcp_connector> connector_{ nullptr };
 	double angular_value_{ 0.0 };
+	std::map<std::string, std::vector<double>> response_;
+	std::vector<double> angles_;
+	std::vector<double> velocities_;
 	std::shared_ptr<RotaryEncoderBase> encoder_{ nullptr };
 	std::string addr_;
 	int port_{ 8888 };

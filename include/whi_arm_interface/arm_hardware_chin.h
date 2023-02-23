@@ -31,14 +31,16 @@ namespace whi_arm_hardware_interface
         void update(const ros::TimerEvent& Event);
         void read();
         void write(ros::Duration ElapsedTime);
-        void composeCommand(std::string& Command) const;
-        std::string composeCommand(std::string& Positions, std::string& Velocities, std::string& Accelerations) const;
+        std::string composeCommand(const std::string& Command) const;
+        std::string composeCommand(const std::string& Positions, const std::string& Velocities,
+            const std::string& Accelerations) const;
 
     protected:
         enum HomingState { STA_TO_HOME = 0, STA_HOMING, STA_HOMED };
 
     protected:
-        const std::string name_{ "mega2560" };
+        const std::string name_{ "socket" };
+        std::string controller_type_{ "position" };
         int homing_state_{ STA_HOMED };
         double speed_rate_{ 0.5 };
         std::vector<double> forward_dirs_;

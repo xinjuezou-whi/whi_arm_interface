@@ -87,10 +87,13 @@ void DriverSocket::setMotor(uint32_t ResponseLength)
 		std::string cmd("SERVO_STATE");
 		if (sendCommand(cmd))
 		{
-			std::vector<std::string> feedback = readFeedback(cmd);
-			for (const auto& it : feedback)
+			std::vector<std::string> feedback = readFeedback();
+			if (!feedback.empty() && cmd == feedback.front())
 			{
-				servoOn |= (it != "OFF");
+				for (size_t i = 1; i < feedback.size(); ++i)
+				{
+					servoOn |= (feedback[i] != "OFF");
+				}
 			}
 		}
 		if (!servoOn)
@@ -111,44 +114,32 @@ void DriverSocket::setMotor(uint32_t ResponseLength)
 	}
 }
 
-std::vector<double> DriverSocket::readAngles()
+void DriverSocket::request(const std::vector<std::string>& Params)
 {
-	std::vector<double> angles;
-
 	if (connector_->is_connected())
 	{
-		std::string cmd("ANGLES");
-		if (sendCommand(cmd))
+		for (const auto& req : Params)
 		{
-			std::vector<std::string> feedback = readFeedback(cmd);
-			for (const auto& it : feedback)
+			if (sendCommand(req))
 			{
-				angles.push_back(std::stod(it));
+				std::vector<std::string> feedback = readFeedback();
+				if (!feedback.empty() && std::find(Params.begin(), Params.end(), feedback.front()) != Params.end())
+				{
+					std::vector<double> values;
+					for (size_t i = 1; i < feedback.size(); ++i)
+					{
+						values.push_back(std::stod(feedback[i]));
+					}
+					response_[feedback.front()] = values;
+				}
 			}
 		}
 	}
-
-	return angles;
 }
 
-std::vector<double> DriverSocket::readVelocities()
+std::vector<double> DriverSocket::readParam(std::string& Param)
 {
-	std::vector<double> velocities;
-
-	if (connector_->is_connected())
-	{
-		std::string cmd("DANGLES");
-		if (sendCommand(cmd))
-		{
-			std::vector<std::string> feedback = readFeedback(cmd);
-			for (const auto& it : feedback)
-			{
-				velocities.push_back(std::stod(it));
-			}
-		}
-	}
-
-	return velocities;
+	return response_[Param];
 }
 
 int DriverSocket::getState()
@@ -158,10 +149,13 @@ int DriverSocket::getState()
 		std::string cmd("RUN_STATE");
 		if (sendCommand(cmd))
 		{
-			std::vector<std::string> feedback = readFeedback(cmd);
-			for (const auto& it : feedback)
+			std::vector<std::string> feedback = readFeedback();
+			if (!feedback.empty() && cmd == feedback.front())
 			{
-				std::cout << it << std::endl;
+				for (size_t i = 1; i < feedback.size(); ++i)
+				{
+					std::cout << feedback[i] << std::endl;
+				}
 			}
 		}
 	}
@@ -197,25 +191,16 @@ bool DriverSocket::sendCommand(const std::string& Command)
 	return connector_->write_n(coded.data(), coded.size()) == coded.size();
 }
 
-std::vector<std::string> DriverSocket::readFeedback(const std::string& Command)
+std::vector<std::string> DriverSocket::readFeedback()
 {
-	std::vector<std::string> data;
-
 	uint8_t read[response_length_] = { 0 };
 	ssize_t readCount = connector_->read(read, sizeof(read));
 	if (readCount > 0)
 	{
-		auto feedback = decodingFeedback(read, sizeof(read));
-		if (!feedback.empty() && feedback.front() == Command)
-		{
-			for (size_t i = 1; i < feedback.size(); ++i)
-			{
-				data.push_back(feedback[i]);
-			}
-		}
+		return decodingFeedback(read, sizeof(read));
 	}
 
-	return data;
+	return std::vector<std::string>();
 }
 
 std::vector<uint8_t> DriverSocket::codingCommand(const std::string& Command) const
@@ -245,9 +230,9 @@ std::vector<uint8_t> DriverSocket::codingCommand(const std::string& Command) con
 std::vector<std::string> DriverSocket::decodingFeedback(const uint8_t* Data, size_t Length) const
 {
 #ifdef DEBUG
-	for (const auto& it : Data)
+	for (size_t i = 0; i < Length; ++i)
 	{
-		std::cout << std::to_string(it) << ",";
+		std::cout << std::to_string(Data[i]) << ",";
 	}
 	std::cout << std::endl;
 #endif
