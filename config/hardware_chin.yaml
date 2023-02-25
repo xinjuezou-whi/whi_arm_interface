@@ -3,7 +3,7 @@ whi_arm:
     loop_hz: 20 # hz
     hardware: 'socket'
     forward_dirs: [-1, -1, -1, -1, -1, -1]
-    speed_rate: 20
+    speed_rate: 100
     angular_velocities: [90, 90, 90, 90, 90, 90]
     angular_accelerations: [180, 180, 180, 180, 180, 180]
     socket:

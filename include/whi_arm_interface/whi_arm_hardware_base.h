@@ -23,6 +23,7 @@ Changelog:
 #include <hardware_interface/joint_state_interface.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/posvelacc_command_interface.h>
+#include <hardware_interface/posvel_command_interface.h>
 #include <joint_limits_interface/joint_limits.h>
 #include <joint_limits_interface/joint_limits_interface.h>
 #include <joint_limits_interface/joint_limits_rosparam.h>
@@ -52,6 +53,8 @@ namespace whi_arm_hardware_interface
 		hardware_interface::JointStateInterface joint_state_interface_;
 		/// joint command interface: position
 		hardware_interface::PositionJointInterface position_joint_interface_;
+		/// joint command interface: position, velocity
+		hardware_interface::PosVelJointInterface pos_vel_joint_interface_;
 		/// joint command interface: position, velocity, and acceleration
 		hardware_interface::PosVelAccJointInterface pos_vel_acc_joint_interface_;
 		/// joint limit interfaces

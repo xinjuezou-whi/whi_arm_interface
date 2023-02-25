@@ -64,6 +64,10 @@ void DriverSocket::actuate(std::string Command)
 	if (connector_->is_connected())
 	{
 		sendCommand(Command);
+#ifndef DEBUG
+		//std::cout << Command << std::endl;
+		readFeedback();
+#endif
 	}
 }
 

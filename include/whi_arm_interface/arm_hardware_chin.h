@@ -31,7 +31,7 @@ namespace whi_arm_hardware_interface
         void update(const ros::TimerEvent& Event);
         void read();
         void write(ros::Duration ElapsedTime);
-        std::string composeCommand(const std::string& Command) const;
+        std::string composeCommand(const std::string& Positions) const;
         std::string composeCommand(const std::string& Positions, const std::string& Velocities,
             const std::string& Accelerations) const;
 

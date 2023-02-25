@@ -8,6 +8,9 @@ ar_arm:
       type: joint_state_controller/JointStateController
       publish_rate: 50
     command:
+      # position_controllers/JointTrajectoryController
+      # pos_vel_controllers/JointTrajectoryController
+      # pos_vel_acc_controllers/JointTrajectoryController
       type: position_controllers/JointTrajectoryController
       joints:
         - joint_1
