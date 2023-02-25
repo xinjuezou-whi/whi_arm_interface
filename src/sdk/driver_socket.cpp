@@ -64,9 +64,9 @@ void DriverSocket::actuate(std::string Command)
 	if (connector_->is_connected())
 	{
 		sendCommand(Command);
-#ifndef DEBUG
-		//std::cout << Command << std::endl;
 		readFeedback();
+#ifdef DEBUG
+		std::cout << Command << std::endl;
 #endif
 	}
 }
@@ -250,7 +250,7 @@ std::vector<std::string> DriverSocket::decodingFeedback(const uint8_t* Data, siz
 		if (crc == readCrc)
 		{
 #ifdef DEBUG
-			std::cout << "feedback " << feedback << std::endl;
+			std::cout << "feedback:" << feedback << std::endl;
 #endif
 			return split(feedback, ",");
 		}

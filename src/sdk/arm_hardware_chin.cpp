@@ -173,8 +173,8 @@ namespace whi_arm_hardware_interface
 
 #ifdef DEBUG
     // following commands refer to demo.py of Chin
-    std::vector<std::string> commands;
-    void commandList()
+    std::vector<std::string> commands_demo;
+    void initDebugCommandList()
     {
         commands.push_back("MOVEJ,DOF,-11.709996,-1.34654,-119.936058,-28.582537,-89.999959,-11.709957,DOF,99,99,99,99,99,99,DOF,198,198,198,198,198,198,0");
         commands.push_back("MOVEL,TL,505.091468,-99.512703,159.2,RPY,-180,0,90,1111,1111,0");
@@ -223,17 +223,36 @@ namespace whi_arm_hardware_interface
         if (((DriverSocket*)drivers_map_[name_].get())->isServoOn(2000))
         {
 #ifdef DEBUG
-            static int index = 0;
-            if (index == 0)
+            /// simulate demo.py
+            // static int index = 0;
+            // if (index == 0)
+            // {
+            //     initDebugCommandList();
+            // }
+            // if (index < commands_demo.size())
+            // {
+            //     drivers_map_[name_]->actuate(commands_demo[index]);
+            //     ++index;
+            // }
+            /// single joint testing
+            static double step = 0.5;
+            static const double LIMIT_MIN = -30.0;
+            static const double LIMIT_MAX = 30.0;
+            static double pos = LIMIT_MIN;
+            std::string cmd = std::string("MOVEJ,1") + "," + std::to_string(pos) + ",5.0,10.0";
+            drivers_map_[name_]->actuate(cmd);
+            pos += step;
+            if (pos >= LIMIT_MAX)
             {
-                commandList();
+                step *= -1.0;
+                pos = LIMIT_MAX;
             }
-            if (index < commands.size())
+            else if (pos <= LIMIT_MIN)
             {
-                drivers_map_[name_]->actuate(commands[index]);
-                ++index;
+                step *= -1.0;
+                pos = LIMIT_MIN;
             }
-#endif
+#else
             std::string positions;
             for (std::size_t i = 0; i < std::min(forward_dirs_.size(), joint_position_command_.size()); ++i)
             {
@@ -284,6 +303,7 @@ namespace whi_arm_hardware_interface
                 std::cout << std::endl;
 #endif
             }
+#endif
         }
     }
 

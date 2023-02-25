@@ -1,6 +1,6 @@
 whi_arm:
   hardware_interface:
-    loop_hz: 20 # hz
+    loop_hz: 50 # hz
     hardware: 'socket'
     forward_dirs: [-1, -1, -1, -1, -1, -1]
     speed_rate: 100
