@@ -222,20 +222,24 @@ namespace whi_arm_hardware_interface
         {
             if (mode_close_loop_)
             {
-                std::size_t begin = 0;
-                std::size_t end = 0;
-                for (std::size_t i = 0; i < joint_position_.size(); ++i)
+                try
                 {
-                    begin = State.find('p', begin);
-                    end = State.find('p', begin + 1);
-                    if (end > begin)
+                    std::size_t begin = 0;
+                    std::size_t end = 0;
+                    for (std::size_t i = 0; i < joint_position_.size(); ++i)
                     {
-                        joint_position_[i] = angles::from_degrees(forward_dir_[i] * std::stoi(State.substr(begin + 1, end - begin - 1)) / steps_per_deg_[i]);
-                        begin = end;
-#ifdef DEBUG
-                        std::cout << "pose of joint " << i << " " << angles::to_degrees(joint_position_[i]) << std::endl;
-#endif
+                        begin = State.find('p', begin);
+                        end = State.find('p', begin + 1);
+                        if (end > begin)
+                        {
+                            joint_position_[i] = angles::from_degrees(forward_dir_[i] * std::stoi(State.substr(begin + 1, end - begin - 1)) / steps_per_deg_[i]);
+                            begin = end;
+                        }
                     }
+                }
+                catch (const std::exception& e)
+                {
+                    std::cout << "tranferred data exception" << std::endl;
                 }
             }
         }
