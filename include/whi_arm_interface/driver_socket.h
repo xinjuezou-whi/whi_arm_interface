@@ -5,6 +5,11 @@ Features:
 - dc-motor operation logic for socket hardware
 - xxx
 
+Dependency:
+- sockpp, https://github.com/fpagliughi/sockpp
+- CRC++, https://github.com/d-bahr/CRCpp
+- xxx
+
 Written by Xinjue Zou, xinjue.zou@outlook.com
 
 GNU General Public License, check LICENSE for more information.
