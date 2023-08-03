@@ -2,4 +2,5 @@
 arm hardware interface
 
 ## Dependency
-Build sockpp, refer to [its repository](https://github.com/fpagliughi/sockpp)
+* sockpp, refer to [its repository](https://github.com/fpagliughi/sockpp)
+* CRC++, refer to [its repository](https://github.com/d-bahr/CRCpp)
