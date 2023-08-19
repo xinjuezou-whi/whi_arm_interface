@@ -6,6 +6,9 @@ Features:
 - abstract arm hardware interfaces
 - xxx
 
+Dependency:
+- sudo apt install apt ros-<distro>-joint-trajectory-controller
+
 Written by Xinjue Zou, xinjue.zou@outlook.com
 
 GNU General Public License, check LICENSE for more information.
