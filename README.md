@@ -10,5 +10,5 @@ arm hardware interface
 ## Permission for /dev/ttyama0
 
 ```
-udo usermod -a -G dialout <user name>
+sudo usermod -a -G dialout <user name>
 ```
