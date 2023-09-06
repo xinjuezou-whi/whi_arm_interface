@@ -12,3 +12,4 @@ arm hardware interface
 ```
 sudo usermod -a -G dialout <user name>
 ```
+Then reboot
