@@ -321,12 +321,18 @@ namespace whi_arm_hardware_interface
         }
         command += "0";
 
+#ifdef DEBUG
+        ROS_INFO_STREAM(command);
+#endif
         return command;
     }
 
     std::string ChinHardwareInterface::composeCommand(const std::string& Positions, const std::string& Velocities,
         const std::string& Accelerations) const
     {
+#ifdef DEBUG
+        ROS_INFO_STREAM("MOVEJ,DOF," + Positions + ",DOF," + Velocities + ",DOF," + Accelerations + ",0");
+#endif
         return std::string("MOVEJ,DOF," + Positions + ",DOF," + Velocities + ",DOF," + Accelerations + ",0");
     }
 }
