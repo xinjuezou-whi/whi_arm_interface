@@ -38,7 +38,7 @@ DriverSocket::DriverSocket(const std::string& JointName, const std::string& Addr
 
 DriverSocket::~DriverSocket()
 {
-	if (connector_->is_connected())
+	if (connector_->is_open())
 	{
 		for (int i = 0; i < 3; ++i)
 		{
@@ -66,7 +66,7 @@ void DriverSocket::actuate(double Command)
 
 void DriverSocket::actuate(std::string Command)
 {
-	if (connector_->is_connected())
+	if (connector_->is_open())
 	{
 		sendCommand(Command);
 		readFeedback();
@@ -90,7 +90,7 @@ uint64_t currentTick()
 void DriverSocket::setMotor(uint32_t ResponseLength)
 {
 	response_length_ = ResponseLength;
-	if (connector_->is_connected())
+	if (connector_->is_open())
 	{
 		bool servoOn = false;
 		std::string cmd("SERVO_STATE");
@@ -108,7 +108,7 @@ void DriverSocket::setMotor(uint32_t ResponseLength)
 		if (!servoOn)
 		{
 			std::vector<uint8_t> coded = codingCommand("SERVO");
-			int res = connector_->write_n(coded.data(), coded.size());
+			auto rc = connector_->write_n(coded.data(), coded.size());
 			// give a breathe to arm
 			tick_servo_ = std::make_unique<uint64_t>(currentTick());
 		}
@@ -125,7 +125,7 @@ void DriverSocket::setMotor(uint32_t ResponseLength)
 
 void DriverSocket::request(const std::vector<std::string>& Params)
 {
-	if (connector_->is_connected())
+	if (connector_->is_open())
 	{
 		for (const auto& req : Params)
 		{
@@ -153,7 +153,7 @@ std::vector<double> DriverSocket::readParam(std::string& Param)
 
 int DriverSocket::getState()
 {
-	if (connector_->is_connected())
+	if (connector_->is_open())
 	{
 		std::string cmd("RUN_STATE");
 		if (sendCommand(cmd))
@@ -197,14 +197,14 @@ bool DriverSocket::sendCommand(const std::string& Command)
 	std::cout << std::endl;
 #endif
 	std::vector<uint8_t> coded = codingCommand(Command);
-	return connector_->write_n(coded.data(), coded.size()) == coded.size();
+	return connector_->write_n(coded.data(), coded.size()).value() == coded.size();
 }
 
 std::vector<std::string> DriverSocket::readFeedback()
 {
 	uint8_t read[response_length_] = { 0 };
-	ssize_t readCount = connector_->read(read, sizeof(read));
-	if (readCount > 0)
+	auto rc = connector_->read(read, sizeof(read));
+	if (rc.value() > 0)
 	{
 		return decodingFeedback(read, sizeof(read));
 	}
