@@ -39,12 +39,12 @@ namespace whi_arm_hardware_interface
 	{
 	public:
 		enum Hardware { I2C = 0, CAN_BUS, SERIAL, ROSSERIAL, SOCKET, HARDWARE_SUM };
-		static const char* hardware[HARDWARE_SUM];
+		static constexpr const char* hardware[HARDWARE_SUM] = { "i2c", "canbus", "serial", "rosserial", "socket" };
 
 	public:
 		ArmHardware() = delete;
-		ArmHardware(std::shared_ptr<ros::NodeHandle>& NodeHandle);
-		virtual ~ArmHardware();
+		ArmHardware(std::shared_ptr<ros::NodeHandle>& NodeHandle) : node_handle_(NodeHandle) {};
+		virtual ~ArmHardware() {};
 
 	protected:
 		std::shared_ptr<ros::NodeHandle> node_handle_{ nullptr };
