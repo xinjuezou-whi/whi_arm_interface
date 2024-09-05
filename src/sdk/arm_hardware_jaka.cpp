@@ -244,7 +244,7 @@ namespace whi_arm_hardware_interface
         {
             positions.push_back(it);
         }
-#ifndef DEBUG
+#ifdef DEBUG
         std::cout << "read positions:";
         for (const auto& it : positions)
         {
@@ -264,7 +264,7 @@ namespace whi_arm_hardware_interface
         {
             positions.jVal[i] = Positions[i];
         }
-#ifndef DEBUG
+#ifdef DEBUG
         std::cout << "commanded positions:";
         for (const auto& it : positions.jVal)
         {
