@@ -1,0 +1,8 @@
+whi_arm_interface:
+  loop_hz: 50 # hz
+  hardware: jaka_api
+  socket:
+    addr: 192.168.4.44
+    port: 10001
+  jaka_api:
+    addr: 10.5.5.100

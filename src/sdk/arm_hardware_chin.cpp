@@ -27,6 +27,15 @@ namespace whi_arm_hardware_interface
         init();
     }
 
+    ChinHardwareInterface::~ChinHardwareInterface()
+    {
+        for (int i = 0; i < 3; ++i)
+		{
+			((DriverSocket*)drivers_map_[name_].get())->sendCommand("SHUT");
+			usleep(200000);
+		}
+    }
+
     void ChinHardwareInterface::init()
     {
         ros::NodeHandle nh_private("~");
@@ -127,8 +136,9 @@ namespace whi_arm_hardware_interface
         }
 
         // controller
-        node_handle_->param("/whi_arm/hardware_interface/loop_hz", loop_hz_, 10.0);
         controller_manager_ = std::make_unique<controller_manager::ControllerManager>(this, *node_handle_);
+
+        node_handle_->param("/whi_arm/hardware_interface/loop_hz", loop_hz_, 10.0);
         ros::Duration updateFreq = ros::Duration(1.0 / loop_hz_);
         non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(updateFreq, std::bind(&ChinHardwareInterface::update, this, std::placeholders::_1)));
     }
@@ -143,6 +153,8 @@ namespace whi_arm_hardware_interface
 
     void ChinHardwareInterface::read()
     {
+        static bool init = true;
+
         if (((DriverSocket*)drivers_map_[name_].get())->isServoOn(3000))
         {
             std::vector<std::string> params { "ANGLES", "DANGLES" };
@@ -169,6 +181,12 @@ namespace whi_arm_hardware_interface
 #endif
             // there's no acceleration data available in joint state handle
         }
+        if (init)
+        {
+            joint_position_command_ = joint_position_;
+            joint_velocity_command_ = joint_velocity_;
+            init = false;
+        }        
     }
 
 #ifdef DEBUG

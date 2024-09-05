@@ -5,8 +5,9 @@
   <arg name="close_loop" default="true"/>
   <arg name="arm" default="chin"/>
   <arg name="arm_model" default="frame"/>
-  <arg name="description_pkg" default="$(eval '$(find ' + arg('arm') + '_' + arg('arm_model') + '_description)')"/>
   <arg name="config_pkg" default="$(eval '$(find ' + arg('arm') + '_' + arg('arm_model') + '_moveit_config)')"/>
+  <arg name="description_pkg" default="$(eval '$(find ' + arg('arm') + '_' + arg('arm_model') + '_description)')" unless="$(eval arg('arm') == 'jaka')"/>
+  <arg name="description_pkg" default="$(find jaka_description)" if="$(eval arg('arm') == 'jaka')"/>
 
   <!-- params -->
   <rosparam file="$(find whi_arm_interface)/config/hardware_$(arg arm).yaml" command="load"/>
@@ -23,10 +24,8 @@
 
   <!-- Start hardware_interface node -->
   <node name="whi_arm_interface" pkg="whi_arm_interface" type="whi_arm_interface_node" output="screen">
-    <param name="home" type="bool" value="true" if="$(arg home)"/>
-    <param name="home" type="bool" value="false" unless="$(arg home)"/>
-    <param name="close_loop" type="bool" value="true" if="$(arg close_loop)"/>
-    <param name="close_loop" type="bool" value="false" unless="$(arg close_loop)"/>
+    <param name="home" type="bool" value="$(arg home)"/>
+    <param name="close_loop" type="bool" value="$(arg close_loop)"/>
     <param name="arm" value="$(arg arm)"/>
   </node>
 

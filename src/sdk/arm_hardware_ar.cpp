@@ -133,8 +133,9 @@ namespace whi_arm_hardware_interface
         registerInterface(&position_joint_interface_);
 
         // controller
-        node_handle_->param("/ar_arm/hardware_interface/loop_hz", loop_hz_, 10.0);
         controller_manager_ = std::make_unique<controller_manager::ControllerManager>(this, *node_handle_);
+
+        node_handle_->param("/ar_arm/hardware_interface/loop_hz", loop_hz_, 10.0);        
         ros::Duration updateFreq = ros::Duration(1.0 / loop_hz_);
         non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(updateFreq, std::bind(&ArHardwareInterface::update, this, std::placeholders::_1)));
     }
