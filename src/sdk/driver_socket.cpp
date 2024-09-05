@@ -109,20 +109,30 @@ void DriverSocket::setMotor(uint32_t ResponseLength)
 
 void DriverSocket::request(const std::vector<std::string>& Params)
 {
-	for (const auto& req : Params)
+	for (int i  = 0; i < Params.size(); )
 	{
-		if (sendCommand(req))
+		if (sendCommand(Params[i]))
 		{
 			std::vector<std::string> feedback = readFeedback();
-			if (!feedback.empty() && std::find(Params.begin(), Params.end(), feedback.front()) != Params.end())
+			if (!feedback.empty())
 			{
-				std::vector<double> values;
-				for (size_t i = 1; i < feedback.size(); ++i)
+				++i;
+
+				if (std::find(Params.begin(), Params.end(), feedback.front()) != Params.end())
 				{
-					values.push_back(std::stod(feedback[i]));
+					std::vector<double> values;
+					for (size_t i = 1; i < feedback.size(); ++i)
+					{
+						values.push_back(std::stod(feedback[i]));
+					}
+					response_[feedback.front()] = values;
 				}
-				response_[feedback.front()] = values;
 			}
+		}
+		else
+		{
+			++i;
+			ROS_ERROR_STREAM("failed to send command " << Params[i]);
 		}
 	}
 }
