@@ -79,7 +79,7 @@ namespace whi_arm_hardware_interface
         }
         else
         {
-            ROS_FATAL_STREAM_NAMED("failed to init driver of %s", hardwareStr.c_str());
+            ROS_ERROR_STREAM("failed to init driver of " << hardwareStr);
         }
 
         // resize vectors

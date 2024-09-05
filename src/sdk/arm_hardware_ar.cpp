@@ -96,17 +96,17 @@ namespace whi_arm_hardware_interface
                 }
                 catch (serial::IOException& e)
                 {
-                    ROS_FATAL_STREAM_NAMED("failed to open serial %s", port.c_str());
+                    ROS_ERROR_STREAM("failed to open serial " << port);
                 }
             }
             else
             {
-                ROS_FATAL_NAMED("failed to get serial params %s, %d", port.c_str(), baudrate);
+                ROS_ERROR_STREAM("failed to get serial params " << port.c_str() << "," << baudrate);
             }
         }
         else
         {
-            ROS_FATAL_STREAM_NAMED("failed to init driver of %s", hardwareStr.c_str());
+            ROS_ERROR_STREAM("failed to init driver of " << hardwareStr);
         }
 
         // resize vectors

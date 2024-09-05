@@ -42,23 +42,17 @@ public:
 public:
 	// specific
 	void request(const std::vector<std::string>& Params);
-	std::vector<double> readParam(std::string& Param);
-	int getState();
-	bool isServoOn(uint32_t Duration = 500) const;
+	std::vector<double> readParam(const std::string& Param);
 	bool sendCommand(const std::string& Command);
-	std::vector<std::string> readFeedback();
+	std::string readFeedback();
 	std::vector<uint8_t> codingCommand(const std::string& Command) const;
-	std::vector<std::string> decodingFeedback(const uint8_t* Data, size_t Length) const;
+	void setParamsKey(const char*const* Keys, int Size);
 
 protected:
 	std::unique_ptr<sockpp::tcp_connector> connector_{ nullptr };
-	double angular_value_{ 0.0 };
 	std::map<std::string, std::vector<double>> response_;
-	std::vector<double> angles_;
-	std::vector<double> velocities_;
 	std::shared_ptr<RotaryEncoderBase> encoder_{ nullptr };
 	std::string addr_;
 	int port_{ 8888 };
-	std::vector<uint8_t> coded_command_;
-	std::unique_ptr<uint64_t> tick_servo_{ nullptr };
+	std::vector<std::string> params_key_;
 };

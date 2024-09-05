@@ -13,7 +13,7 @@ All text above must be included in any redistribution.
 
 ******************************************************************/
 #include "whi_arm_interface/arm_hardware_jaka.h"
-#include "whi_arm_interface/driver_socket.h"
+#include "whi_arm_interface/driver_socket_json.h"
 #include "whi_arm_interface/jakaAPI/jkerr.h"
 #include "whi_arm_interface/jakaAPI/jktypes.h"
 #include <json/json.h>
@@ -33,7 +33,14 @@ namespace whi_arm_hardware_interface
 
     JakaHardwareInterface::~JakaHardwareInterface()
     {
-        jaka_api_close();
+        if (jaka_api_instance_)
+        {
+            jaka_api_close();
+        }
+        else
+        {
+            jaka_tcp_close();
+        }
     }
 
     void JakaHardwareInterface::init()
@@ -54,38 +61,28 @@ namespace whi_arm_hardware_interface
         }
 
         // drivers
-        std::string hardwareStr;
-        node_handle_->param("/whi_arm_interface/hardware", hardwareStr, std::string(hardware[SOCKET]));
-        if (hardwareStr == hardware[SOCKET])
+        node_handle_->param("/whi_arm_interface/hardware", name_, std::string(hardware[SOCKET]));
+        if (name_ == hardware[SOCKET])
         {
             std::string addr;
             int port;
             int dataLength;
-            node_handle_->param("/whi_arm_interface/socket/addr", addr, std::string("192.168.4.44"));
+            node_handle_->param("/whi_arm_interface/socket/addr", addr, std::string("10.5.5.1"));
             node_handle_->param("/whi_arm_interface/socket/port", port, 10001);
-            // drivers_map_.emplace(name_, std::make_unique<DriverSocket>(name_, addr, port));
-            // ((DriverSocket*)drivers_map_[name_].get())->setMotor(dataLength);
+            drivers_map_.emplace(name_, std::make_unique<DriverSocketJson>(name_, addr, port));
 
-            ///////////////////////////////////////
-            Json::Value root;
-            Json::Value data;
-            root["action"] = "run";
-            data["number"] = 1;
-            root["data"] = data;
-            Json::StreamWriterBuilder builder;
-            builder["indentation"] = "";
-            const std::string json_file = Json::writeString(builder, root);
-            std::cout << "dddddddddddddddddddddddddddd " << json_file << std::endl;
+            jaka_tcp_init();
         }
-        else if (hardwareStr == hardware[JAKA_API])
+        else if (name_ == hardware[JAKA_API])
         {
             std::string addr;
             node_handle_->param("/whi_arm_interface/jaka_api/addr", addr, std::string("10.5.5.1"));
+
             jaka_api_init(addr);
         }
         else
         {
-            ROS_FATAL_STREAM_NAMED("failed to init driver of %s", hardwareStr.c_str());
+            ROS_ERROR_STREAM("failed to init driver of " << name_);
         }
 
         // resize vectors
@@ -168,14 +165,14 @@ namespace whi_arm_hardware_interface
         }
         else
         {
-
+            positions = jaka_tcp_readPositions();
         }
 
         for (std::size_t i = 0; i < std::min(joint_position_.size(), positions.size()); ++i)
         {
             joint_position_[i] = positions[i];
         }
-        if (init)
+        if (init && !positions.empty())
         {
             joint_position_command_ = joint_position_;
             init = false;
@@ -184,15 +181,135 @@ namespace whi_arm_hardware_interface
 
     void JakaHardwareInterface::write(ros::Duration ElapsedTime)
     {
-        // ((DriverJakaApi*)drivers_map_[name_].get())->servoPositions(joint_position_command_, ElapsedTime.toSec());
         if (jaka_api_instance_)
         {
             jaka_api_servoPositions(joint_position_command_, ElapsedTime.toSec());
         }
         else
         {
-
+            jaka_tcp_servoPositions(joint_position_command_, ElapsedTime.toSec());
         }
+    }
+
+    bool JakaHardwareInterface::jaka_tcp_init()
+    {
+        bool res = true;
+
+        ((DriverSocketJson*)drivers_map_[name_].get())->setParamsKey(paramKey, PARAM_KEY_SUM);
+
+        Json::Value root;
+        Json::StreamWriterBuilder builder;
+        builder["indentation"] = "";
+
+        std::vector<std::string> requests;
+        // {"cmdName":"servo_move","relFlag":0}
+        root["cmdName"] = "servo_move";
+        root["relFlag"] = 0;
+        requests.push_back(Json::writeString(builder, root));
+        // delay 500ms
+        requests.push_back("delay:500");
+        // {"cmdName":"set_servo_move_filter","filter_type":1",lpf_cf":0.5}
+        root.clear();
+        root["cmdName"] = "set_servo_move_filter";
+        root["filter_type"] = 1;
+        root["lpf_cf"] = 0.5;
+        requests.push_back(Json::writeString(builder, root));
+        // {"cmdName":"power_on"}
+        root.clear();
+        root["cmdName"] = "power_on";
+        requests.push_back(Json::writeString(builder, root));
+        // {"cmdName":"enable_robot"}
+        root.clear();
+        root["cmdName"] = "enable_robot";
+        requests.push_back(Json::writeString(builder, root));
+        // {"cmdName":"servo_move","relFlag":1}
+        root["cmdName"] = "servo_move";
+        root["relFlag"] = 1;
+        requests.push_back(Json::writeString(builder, root));
+
+        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+
+        return res;
+    }
+
+    void JakaHardwareInterface::jaka_tcp_close()
+    {
+        Json::Value root;
+        Json::StreamWriterBuilder builder;
+        builder["indentation"] = "";
+
+        std::vector<std::string> requests;
+        // {"cmdName":"servo_move","relFlag":0}
+        root["cmdName"] = "servo_move";
+        root["relFlag"] = 0;
+        requests.push_back(Json::writeString(builder, root));
+        // {"cmdName":"disable_robot"}
+        root["cmdName"] = "disable_robot";
+        requests.push_back(Json::writeString(builder, root));
+        // {"cmdName":"power_off"}
+        root["cmdName"] = "power_off";
+        requests.push_back(Json::writeString(builder, root));
+
+        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+    }
+
+    std::vector<double> JakaHardwareInterface::jaka_tcp_readPositions()
+    {
+        Json::Value root;
+        Json::StreamWriterBuilder builder;
+        builder["indentation"] = "";
+
+        std::vector<std::string> requests;
+        // {"cmdName":"get_joint_pos"}
+        root["cmdName"] = "get_joint_pos";
+        requests.push_back(Json::writeString(builder, root));
+
+        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        auto read = ((DriverSocketJson*)drivers_map_[name_].get())->readParam(paramKey[JOINT_POS]);
+        for (auto& it : read)
+        {
+            it = angles::from_degrees(it);
+        }
+#ifdef DEBUG
+        std::cout << "read positions:";
+        for (const auto& it : read)
+        {
+            std::cout << it << ",";
+        }
+        std::cout << std::endl;
+#endif
+        return read;
+    }
+
+    void JakaHardwareInterface::jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration)
+    {
+        int stepNum = int(Duration / 0.008);
+
+        Json::Value root;
+        Json::Value data;
+        Json::StreamWriterBuilder builder;
+        builder["indentation"] = "";
+
+        std::vector<std::string> requests;
+        // {"cmdName":"servo_j","relFlag":0,"jointPosition":[0.1,0,0,0,0,0],"stepNum":1}
+        root["cmdName"] = "servo_j";
+        root["relFlag"] = 0;
+        for (const auto& it : Positions)
+        {
+            root["jointPosition"].append(angles::to_degrees(it));
+        }
+#ifdef DEBUG
+        std::cout << "commanded positions:";
+        for (const auto& it : Positions)
+        {
+            std::cout << it << ",";
+        }
+        std::cout << "with step:" << stepNum << std::endl;
+#endif
+        root["stepNum"] = stepNum;
+        requests.push_back(Json::writeString(builder, root));
+
+        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
     }
 
     bool JakaHardwareInterface::jaka_api_init(const std::string& Addr)
@@ -259,6 +376,7 @@ namespace whi_arm_hardware_interface
     void JakaHardwareInterface::jaka_api_servoPositions(const std::vector<double>& Positions, double Duration)
     {
         int stepNum = int(Duration / 0.008);
+
         JointValue positions;
         for (int i = 0; i < std::min(Positions.size(), sizeof(positions.jVal)); ++i)
         {

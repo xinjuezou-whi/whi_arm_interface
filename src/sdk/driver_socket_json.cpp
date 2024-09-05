@@ -17,6 +17,9 @@ All text above must be included in any redistribution.
 
 ******************************************************************/
 #include "whi_arm_interface/driver_socket_json.h"
+#include <json/json.h>
+
+#include <thread>
 
 DriverSocketJson::DriverSocketJson(const std::string& JointName)
 	: DriverBase(JointName)
@@ -39,7 +42,7 @@ DriverSocketJson::~DriverSocketJson()
 
 double DriverSocketJson::readAngle()
 {
-	return angular_value_;
+	return 0.0;
 }
 
 void DriverSocketJson::actuate(double Command)
@@ -62,71 +65,41 @@ void DriverSocketJson::cal_angularVel2PwmDuty()
 
 void DriverSocketJson::request(const std::vector<std::string>& Params)
 {
-	for (const auto& req : Params)
+	const std::string key("delay:");
+
+	for (int i = 0; i < Params.size(); )
 	{
-		if (sendCommand(req))
+		auto pos = Params[i].find(key);
+		if (pos != std::string::npos)
 		{
-			std::vector<std::string> feedback = readFeedback();
-			if (!feedback.empty() && std::find(Params.begin(), Params.end(), feedback.front()) != Params.end())
+			std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(Params[i].substr(pos + key.length()))));
+			++i;
+		}
+		else
+		{
+			if (sendCommand(Params[i]))
 			{
-				std::vector<double> values;
-				for (size_t i = 1; i < feedback.size(); ++i)
+				if (!readFeedback().empty())
 				{
-					values.push_back(std::stod(feedback[i]));
+					++i;
 				}
-				response_[feedback.front()] = values;
+			}
+			else
+			{
+				++i;
+				ROS_ERROR_STREAM("failed to send command " << Params[i]);
 			}
 		}
 	}
 }
 
-std::vector<double> DriverSocketJson::readParam(std::string& Param)
+std::vector<double> DriverSocketJson::readParam(const std::string& Param)
 {
 	return response_[Param];
 }
 
-int DriverSocketJson::getState()
-{
-	std::string cmd("RUN_STATE");
-	if (sendCommand(cmd))
-	{
-		std::vector<std::string> feedback = readFeedback();
-		if (!feedback.empty() && cmd == feedback.front())
-		{
-			for (size_t i = 1; i < feedback.size(); ++i)
-			{
-				std::cout << feedback[i] << std::endl;
-			}
-		}
-	}
-
-	return 0;
-}
-
-bool DriverSocketJson::isServoOn(uint32_t Duration/* = 500*/) const
-{
-	if (tick_servo_)
-	{
-		return false;
-	}
-	else
-	{
-		return true;
-	}
-}
-
 bool DriverSocketJson::sendCommand(const std::string& Command)
 {
-#ifdef DEBUG
-	std::string Command("MOVEJ,1,-123.456,30,90");
-	std::vector<uint8_t> codedDebug = codingCommand(Command);
-	std::cout << "debug coding with length: " << codedDebug.size() << std::endl;
-	for (const auto& it : codedDebug)
-	{
-		std::cout << std::hex << int(it) << ",";
-	}
-	std::cout << std::endl;
-#endif
 	if (connector_->is_open())
 	{
 		std::vector<uint8_t> coded = codingCommand(Command);
@@ -139,29 +112,56 @@ bool DriverSocketJson::sendCommand(const std::string& Command)
 	}
 }
 
-std::vector<std::string> DriverSocketJson::readFeedback()
+std::string DriverSocketJson::readFeedback()
 {
-	uint8_t read[1] = { 0 };
+	uint8_t read[256] = { 0 };
 	auto rc = connector_->read(read, sizeof(read));
 	if (rc.value() > 0)
 	{
-		return decodingFeedback(read, sizeof(read));
+		std::string feedback;
+		feedback.assign((char*)read);
+#ifdef DEBUG
+		std::cout << "read feedback " << feedback << std::endl;
+#endif
+
+		for (const auto& key : params_key_)
+		{
+			if (feedback.find(key) != std::string::npos)
+			{
+				const auto rawJsonLength = static_cast<int>(feedback.length());
+				Json::CharReaderBuilder builder;
+				const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+				Json::Value root;
+				JSONCPP_STRING err;
+				reader->parse(feedback.c_str(), feedback.c_str() + rawJsonLength, &root, &err);
+
+				const Json::Value joint_pos = root[key];
+				std::vector<double> values;
+				for (const auto& it : joint_pos)
+				{
+					values.push_back(it.asDouble());
+				}
+				response_[key] = values;
+#ifdef DEBUG
+				std::cout << "read param with key " << key << ":";
+				for (const auto& it : response_[key])
+				{
+					std::cout << it << ",";
+				}
+				std::cout << std::endl;
+#endif
+			}
+		}
+
+		return feedback;
 	}
 
-	return std::vector<std::string>();
+	return std::string();
 }
 
 std::vector<uint8_t> DriverSocketJson::codingCommand(const std::string& Command) const
 {
-	uint32_t length;
 	std::vector<uint8_t> coded;
-#ifdef DEBUG
-	std::cout << "len " << length << " " << std::bitset<8>{ length } << std::endl;
-#endif
-	for (int i = int(sizeof(length)) - 1; i >= 0 ; --i)
-	{
-		coded.push_back(uint8_t(length >> (i * 8)));
-	}
 	for (const auto& it : Command)
 	{
 		coded.push_back(it);
@@ -170,30 +170,10 @@ std::vector<uint8_t> DriverSocketJson::codingCommand(const std::string& Command)
 	return coded;
 }
 
-std::vector<std::string> DriverSocketJson::decodingFeedback(const uint8_t* Data, size_t Length) const
+void DriverSocketJson::setParamsKey(const char*const* Keys, int Size)
 {
-#ifdef DEBUG
-	for (size_t i = 0; i < Length; ++i)
+	for (int i = 0; i < Size; ++i)
 	{
-		std::cout << std::to_string(Data[i]) << ",";
+		params_key_.push_back(Keys[i]);
 	}
-	std::cout << std::endl;
-#endif
-	size_t dataLength = (uint8_t(Data[0] << 24) | uint8_t(Data[1] << 16) | uint8_t(Data[2] << 8) | Data[3]) - 4;
-	if (dataLength < Length)
-	{
-		uint32_t crc = uint32_t(Data[dataLength + 4] << 24) | (Data[dataLength + 5] << 16) |
-			(Data[dataLength + 6] << 8) | Data[dataLength + 7];
-		std::string feedback((char*)Data + 4, dataLength);
-		std::uint32_t readCrc;
-		if (crc == readCrc)
-		{
-#ifdef DEBUG
-			std::cout << "feedback:" << feedback << std::endl;
-#endif
-			return std::vector<std::string>();
-		}
-	}
-
-	return std::vector<std::string>();
 }

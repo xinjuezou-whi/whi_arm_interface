@@ -27,6 +27,10 @@ namespace whi_arm_hardware_interface
 {
     class JakaHardwareInterface : public ArmHardware
     {
+    protected:
+        enum ParamKey { JOINT_POS = 0, PARAM_KEY_SUM };
+        static constexpr const char* paramKey[PARAM_KEY_SUM] = { "joint_pos" };
+
     public:
         JakaHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle);
         ~JakaHardwareInterface();
@@ -36,6 +40,11 @@ namespace whi_arm_hardware_interface
         void update(const ros::TimerEvent& Event);
         void read();
         void write(ros::Duration ElapsedTime);
+        // jaka TCP protocol related
+        bool jaka_tcp_init();
+        void jaka_tcp_close();
+        std::vector<double> jaka_tcp_readPositions();
+        void jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration);
         // jakaAPI related
         bool jaka_api_init(const std::string& Addr);
         void jaka_api_close();
@@ -46,7 +55,7 @@ namespace whi_arm_hardware_interface
         enum HomingState { STA_TO_HOME = 0, STA_HOMING, STA_HOMED };
 
     protected:
-        const std::string name_{ "socket" };
+        std::string name_{ "socket" };
         std::string controller_type_{ "position" };
         std::unique_ptr<JAKAZuRobot> jaka_api_instance_{ nullptr };
     };
