@@ -44,7 +44,7 @@ namespace whi_arm_hardware_interface
         homing_state_ = toHome ? STA_TO_HOME : STA_HOMED;
 
         // joints
-        node_handle_->getParam("/chin_arm/controllers/command/joints", joint_names_);
+        node_handle_->getParam("/chin_arm/joints", joint_names_);
         if (joint_names_.size() == 0)
         {
             // especially for rosrun mode
@@ -93,47 +93,30 @@ namespace whi_arm_hardware_interface
         joint_effort_command_.resize(num_joints_);
 
         // initialize controller
-        node_handle_->param("/chin_arm/controllers/command/type", controller_type_, std::string(""));
         for (std::size_t i = 0; i < num_joints_; ++i)
         {
             // create joint state interface
             JointStateHandle jointStateHandle(joint_names_[i], &joint_position_[i], &joint_velocity_[i], &joint_effort_[i]);
             joint_state_interface_.registerHandle(jointStateHandle);
 
-            if (controller_type_.find("position_controllers") != std::string::npos)
-            {
-                // create joint command interface: position
-                JointHandle jointPositionHandle(jointStateHandle, &joint_position_command_[i]);
-                position_joint_interface_.registerHandle(jointPositionHandle);
-            }
-            else if (controller_type_.find("pos_vel_controllers") != std::string::npos)
-            {
-                // create joint command interface: position, velocity
-                PosVelJointHandle jointPosVelHandle(jointStateHandle,
-                    &joint_position_command_[i], &joint_velocity_command_[i]);
-                pos_vel_joint_interface_.registerHandle(jointPosVelHandle);               
-            }
-            else if (controller_type_.find("pos_vel_acc_controllers") != std::string::npos)
-            {
-                // create joint command interface: position, velocity, acceleration
-                PosVelAccJointHandle jointPosVelAccHandle(jointStateHandle,
-                    &joint_position_command_[i], &joint_velocity_command_[i], &joint_acceleration_command_[i]);
-                pos_vel_acc_joint_interface_.registerHandle(jointPosVelAccHandle);
-            }
+            // create joint command interface: position
+            JointHandle jointPositionHandle(jointStateHandle, &joint_position_command_[i]);
+            position_joint_interface_.registerHandle(jointPositionHandle);
+
+            // create joint command interface: position, velocity
+            PosVelJointHandle jointPosVelHandle(jointStateHandle,
+                &joint_position_command_[i], &joint_velocity_command_[i]);
+            pos_vel_joint_interface_.registerHandle(jointPosVelHandle);               
+
+            // create joint command interface: position, velocity, acceleration
+            PosVelAccJointHandle jointPosVelAccHandle(jointStateHandle,
+                &joint_position_command_[i], &joint_velocity_command_[i], &joint_acceleration_command_[i]);
+            pos_vel_acc_joint_interface_.registerHandle(jointPosVelAccHandle);
         }
         registerInterface(&joint_state_interface_);
-        if (controller_type_.find("position_controllers") != std::string::npos)
-        {
-            registerInterface(&position_joint_interface_);
-        }
-        else if (controller_type_.find("pos_vel_controllers") != std::string::npos)
-        {
-            registerInterface(&pos_vel_joint_interface_);
-        }
-        else if (controller_type_.find("pos_vel_acc_controllers") != std::string::npos)
-        {
-            registerInterface(&pos_vel_acc_joint_interface_);
-        }
+        registerInterface(&position_joint_interface_);
+        registerInterface(&pos_vel_joint_interface_);
+        registerInterface(&pos_vel_acc_joint_interface_);
 
         // controller
         controller_manager_ = std::make_unique<controller_manager::ControllerManager>(this, *node_handle_);

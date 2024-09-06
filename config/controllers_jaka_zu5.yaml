@@ -8,11 +8,6 @@ jaka_arm:
     - joint_6
 
   controllers:
-    # # when starting the controller or canceling a trajectory, position hold mode is entered
-    # # this parameter specifies the time it takes to bring the current state (position and velocity) to a stop
-    # # if zero, the controller stops at the actual position
-    # stop_trajectory_duration: 0.0 # sec
-
     state:
       type: joint_state_controller/JointStateController
       publish_rate: 50 # 50

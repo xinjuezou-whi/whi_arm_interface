@@ -1,47 +1,34 @@
 chin_arm:
+  joints: &robot_joints
+    - chin_joint_1 #1
+    - chin_joint_2 #3
+    - chin_joint_3 #6
+    - chin_joint_4 #9
+    - chin_joint_5 #11
+    - chin_joint_6 #13
+
   controllers:
-    # when starting the controller or canceling a trajectory, position hold mode is entered
-    # this parameter specifies the time it takes to bring the current state (position and velocity) to a stop
-    # if zero, the controller stops at the actual position
-    stop_trajectory_duration: 0.0 # sec
     state:
       type: joint_state_controller/JointStateController
       publish_rate: 50 # 50
+
     command:
       # position_controllers/JointTrajectoryController
       # pos_vel_controllers/JointTrajectoryController
       # pos_vel_acc_controllers/JointTrajectoryController
       type: position_controllers/JointTrajectoryController
-      joints:
-        - chin_joint_1 #1
-        - chin_joint_2 #3
-        - chin_joint_3 #6
-        - chin_joint_4 #9
-        - chin_joint_5 #11
-        - chin_joint_6 #13
+      joints: *robot_joints
       constraints:
         # if zero, the executing duration would be decided by the start and end time of planned trajectory
         # set it big enough especially for position controller
         goal_time: 20.0 # 0.5 sec
         stopped_velocity_tolerance: 0.01 # 0.01 rad/s
-        chin_joint_1:
-          trajectory: 2.0 # 0.5 rad 
-          goal: 0.01 # 0.01 rad
-        chin_joint_2:
-          trajectory: 2.0
-          goal: 0.01
-        chin_joint_3:
-          trajectory: 2.5
-          goal: 0.01
-        chin_joint_4:
-          trajectory: 2.5
-          goal: 0.01
-        chin_joint_5:
-          trajectory: 3.0
-          goal: 0.01
-        chin_joint_6:
-          trajectory: 2.5
-          goal: 0.01
+        chin_joint_1: { trajectory: 2.0, goal: 0.01 } #{ trajectory: 0.2, goal: 0.1 }
+        chin_joint_2: { trajectory: 2.0, goal: 0.01 } #{ trajectory: 0.2, goal: 0.1 }
+        chin_joint_3: { trajectory: 2.5, goal: 0.01 } #{ trajectory: 0.2, goal: 0.1 }
+        chin_joint_4: { trajectory: 2.5, goal: 0.01 } #{ trajectory: 0.2, goal: 0.1 }
+        chin_joint_5: { trajectory: 3.0, goal: 0.01 } #{ trajectory: 0.2, goal: 0.1 }
+        chin_joint_6: { trajectory: 2.5, goal: 0.01 } #{ trajectory: 0.2, goal: 0.1 }
       gains: # Required if controlling a velocity interface
         chin_joint_1: {p: 100,  d: 1, i: 1, i_clamp: 1}
         chin_joint_2: {p: 100,  d: 1, i: 1, i_clamp: 1}
@@ -49,3 +36,7 @@ chin_arm:
         chin_joint_4: {p: 100,  d: 1, i: 1, i_clamp: 1}
         chin_joint_5: {p: 100,  d: 1, i: 1, i_clamp: 1}
         chin_joint_6: {p: 100,  d: 1, i: 1, i_clamp: 1}
+      # when starting the controller or canceling a trajectory, position hold mode is entered
+      # this parameter specifies the time it takes to bring the current state (position and velocity) to a stop
+      # if zero, the controller stops at the actual position
+      stop_trajectory_duration: 0.0 # sec

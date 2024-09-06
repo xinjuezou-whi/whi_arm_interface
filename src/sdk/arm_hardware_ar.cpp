@@ -39,7 +39,7 @@ namespace whi_arm_hardware_interface
         nh_private.param("close_loop", mode_close_loop_, true);
 
         // joints
-        node_handle_->getParam("/ar_arm/controllers/command/joints", joint_names_);
+        node_handle_->getParam("/ar_arm/joints", joint_names_);
         if (joint_names_.size() == 0)
         {
             // especially for rosrun mode
