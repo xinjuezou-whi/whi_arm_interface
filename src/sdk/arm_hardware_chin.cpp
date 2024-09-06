@@ -73,9 +73,8 @@ namespace whi_arm_hardware_interface
             int dataLength;
             node_handle_->param("/whi_arm/hardware_interface/socket/addr", addr, std::string("192.168.4.44"));
             node_handle_->param("/whi_arm/hardware_interface/socket/port", port, 8888);
-            node_handle_->param("/whi_arm/hardware_interface/socket/response_length", dataLength, 128);
             drivers_map_.emplace(name_, std::make_unique<DriverSocket>(name_, addr, port));
-            ((DriverSocket*)drivers_map_[name_].get())->setMotor(dataLength);
+            ((DriverSocket*)drivers_map_[name_].get())->setMotor();
         }
         else
         {

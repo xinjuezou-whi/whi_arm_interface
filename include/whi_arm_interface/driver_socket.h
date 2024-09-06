@@ -41,7 +41,7 @@ public:
 
 public:
 	// specific
-	void setMotor(uint32_t ResponseLength);
+	void setMotor();
 	void request(const std::vector<std::string>& Params);
 	std::vector<double> readParam(std::string& Param);
 	int getState();
@@ -60,7 +60,6 @@ protected:
 	std::shared_ptr<RotaryEncoderBase> encoder_{ nullptr };
 	std::string addr_;
 	int port_{ 8888 };
-	size_t response_length_{ 128 };
 	std::vector<uint8_t> coded_command_;
 	std::unique_ptr<uint64_t> tick_servo_{ nullptr };
 };

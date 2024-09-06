@@ -77,10 +77,8 @@ uint64_t currentTick()
 		std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-void DriverSocket::setMotor(uint32_t ResponseLength)
+void DriverSocket::setMotor()
 {
-	response_length_ = ResponseLength;
-
 	bool servoOn = false;
 	std::string cmd("SERVO_STATE");
 	if (sendCommand(cmd))
@@ -200,7 +198,7 @@ std::vector<std::string> DriverSocket::readFeedback()
 {
 	if (connector_->is_open())
 	{
-		uint8_t read[response_length_] = { 0 };
+		uint8_t read[256] = { 0 };
 		auto rc = connector_->read(read, sizeof(read));
 		if (rc.value() > 0)
 		{
