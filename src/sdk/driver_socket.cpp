@@ -198,11 +198,18 @@ bool DriverSocket::sendCommand(const std::string& Command)
 
 std::vector<std::string> DriverSocket::readFeedback()
 {
-	uint8_t read[response_length_] = { 0 };
-	auto rc = connector_->read(read, sizeof(read));
-	if (rc.value() > 0)
+	if (connector_->is_open())
 	{
-		return decodingFeedback(read, sizeof(read));
+		uint8_t read[response_length_] = { 0 };
+		auto rc = connector_->read(read, sizeof(read));
+		if (rc.value() > 0)
+		{
+			return decodingFeedback(read, sizeof(read));
+		}
+	}
+	else
+	{
+		ROS_FATAL_STREAM_NAMED("failed to open socket %s", (addr_ + ":" + std::to_string(port_)).c_str());
 	}
 
 	return std::vector<std::string>();

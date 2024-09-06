@@ -114,46 +114,53 @@ bool DriverSocketJson::sendCommand(const std::string& Command)
 
 std::string DriverSocketJson::readFeedback()
 {
-	uint8_t read[256] = { 0 };
-	auto rc = connector_->read(read, sizeof(read));
-	if (rc.value() > 0)
+	if (connector_->is_open())
 	{
-		std::string feedback;
-		feedback.assign((char*)read);
-#ifdef DEBUG
-		std::cout << "read feedback " << feedback << std::endl;
-#endif
-
-		for (const auto& key : params_key_)
+		uint8_t read[256] = { 0 };
+		auto rc = connector_->read(read, sizeof(read));
+		if (rc.value() > 0)
 		{
-			if (feedback.find(key) != std::string::npos)
-			{
-				const auto rawJsonLength = static_cast<int>(feedback.length());
-				Json::CharReaderBuilder builder;
-				const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
-				Json::Value root;
-				JSONCPP_STRING err;
-				reader->parse(feedback.c_str(), feedback.c_str() + rawJsonLength, &root, &err);
-
-				const Json::Value joint_pos = root[key];
-				std::vector<double> values;
-				for (const auto& it : joint_pos)
-				{
-					values.push_back(it.asDouble());
-				}
-				response_[key] = values;
+			std::string feedback;
+			feedback.assign((char*)read);
 #ifdef DEBUG
-				std::cout << "read param with key " << key << ":";
-				for (const auto& it : response_[key])
-				{
-					std::cout << it << ",";
-				}
-				std::cout << std::endl;
+			std::cout << "read feedback " << feedback << std::endl;
 #endif
-			}
-		}
 
-		return feedback;
+			for (const auto& key : params_key_)
+			{
+				if (feedback.find(key) != std::string::npos)
+				{
+					const auto rawJsonLength = static_cast<int>(feedback.length());
+					Json::CharReaderBuilder builder;
+					const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+					Json::Value root;
+					JSONCPP_STRING err;
+					reader->parse(feedback.c_str(), feedback.c_str() + rawJsonLength, &root, &err);
+
+					const Json::Value joint_pos = root[key];
+					std::vector<double> values;
+					for (const auto& it : joint_pos)
+					{
+						values.push_back(it.asDouble());
+					}
+					response_[key] = values;
+#ifdef DEBUG
+					std::cout << "read param with key " << key << ":";
+					for (const auto& it : response_[key])
+					{
+						std::cout << it << ",";
+					}
+					std::cout << std::endl;
+#endif
+				}
+			}
+
+			return feedback;
+		}
+	}
+	else
+	{
+		ROS_FATAL_STREAM_NAMED("failed to open socket %s", (addr_ + ":" + std::to_string(port_)).c_str());
 	}
 
 	return std::string();
