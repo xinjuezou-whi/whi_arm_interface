@@ -13,9 +13,6 @@
   <rosparam file="$(find whi_arm_interface)/config/hardware_$(arg arm).yaml" command="load"/>
   <rosparam file="$(find whi_arm_interface)/config/controllers_$(arg arm)_$(arg arm_model).yaml" command="load"/>
 
-  <!-- Load moveit joint limits config in separate namespace to get velocity limits -->
-  <rosparam file="$(arg config_pkg)/config/joint_limits.yaml" command="load" ns="chin"/>
-
   <!-- Load universal robot description format (URDF) -->
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg description_pkg)/urdf/$(arg arm)_$(arg arm_model).urdf.xacro"/>
 
@@ -40,5 +37,5 @@
   <!-- Start controllers -->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="/" 
         args="/$(arg arm)_arm/controllers/state
-	          /$(arg arm)_arm/controllers/command"/>
+	            /$(arg arm)_arm/controllers/scaled_pos_controller"/>
 </launch>

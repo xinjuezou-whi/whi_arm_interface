@@ -27,6 +27,7 @@ Changelog:
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/posvelacc_command_interface.h>
 #include <hardware_interface/posvel_command_interface.h>
+#include <scaled_joint_trajectory_controller/scaled_joint_command_interface.h>
 #include <joint_limits_interface/joint_limits.h>
 #include <joint_limits_interface/joint_limits_interface.h>
 #include <joint_limits_interface/joint_limits_rosparam.h>
@@ -60,9 +61,15 @@ namespace whi_arm_hardware_interface
 		hardware_interface::PosVelJointInterface pos_vel_joint_interface_;
 		/// joint command interface: position, velocity, and acceleration
 		hardware_interface::PosVelAccJointInterface pos_vel_acc_joint_interface_;
+		/// joint command interface: velocity
+		hardware_interface::VelocityJointInterface velocity_joint_interface_;
 		/// joint limit interfaces
 		joint_limits_interface::PositionJointSaturationInterface position_joint_saturation_interface_;
 		joint_limits_interface::PositionJointSoftLimitsInterface position_joint_limits_interface_;
+		/// joint command interface: scaled position
+		scaled_controllers::ScaledPositionJointInterface scaled_position_joint_interface_;
+		/// joint command interface: scaled velocity
+		scaled_controllers::ScaledVelocityJointInterface scaled_velocity_joint_interface_;
 
 		/// shared memory
 		std::size_t num_joints_{ 0 };

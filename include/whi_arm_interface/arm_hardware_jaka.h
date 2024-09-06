@@ -43,12 +43,12 @@ namespace whi_arm_hardware_interface
         // jaka TCP protocol related
         bool jaka_tcp_init();
         void jaka_tcp_close();
-        std::vector<double> jaka_tcp_readPositions();
+        bool jaka_tcp_read();
         void jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration);
         // jakaAPI related
         bool jaka_api_init(const std::string& Addr);
         void jaka_api_close();
-        std::vector<double> jaka_api_readPositions() const;
+        bool jaka_api_read();
         void jaka_api_servoPositions(const std::vector<double>& Positions, double Duration);
 
     protected:
@@ -58,5 +58,6 @@ namespace whi_arm_hardware_interface
         std::string name_{ "socket" };
         std::string controller_type_{ "position" };
         std::unique_ptr<JAKAZuRobot> jaka_api_instance_{ nullptr };
+        double velocity_scale_{ 1.0 };
     };
 }

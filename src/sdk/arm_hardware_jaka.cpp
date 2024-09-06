@@ -46,7 +46,7 @@ namespace whi_arm_hardware_interface
     void JakaHardwareInterface::init()
     {
         // joints
-        node_handle_->getParam("/jaka_arm/controllers/command/joints", joint_names_);
+        node_handle_->getParam("/jaka_arm/joints", joint_names_);
         if (joint_names_.size() == 0)
         {
             // especially for rosrun mode
@@ -61,6 +61,7 @@ namespace whi_arm_hardware_interface
         }
 
         // drivers
+        node_handle_->param("/whi_arm_interface/velocity_scale", velocity_scale_, 1.0);
         node_handle_->param("/whi_arm_interface/hardware", name_, std::string(hardware[SOCKET]));
         if (name_ == hardware[SOCKET])
         {
@@ -68,8 +69,7 @@ namespace whi_arm_hardware_interface
             int port;
             int dataLength;
             node_handle_->param("/whi_arm_interface/socket/addr", addr, std::string("10.5.5.1"));
-            node_handle_->param("/whi_arm_interface/socket/port", port, 10001);
-            drivers_map_.emplace(name_, std::make_unique<DriverSocketJson>(name_, addr, port));
+            drivers_map_.emplace(name_, std::make_unique<DriverSocketJson>(name_, addr, 10001));
 
             jaka_tcp_init();
         }
@@ -96,54 +96,49 @@ namespace whi_arm_hardware_interface
         joint_effort_command_.resize(num_joints_);
 
         // initialize controller
-        node_handle_->param("/jaka_arm/controllers/command/type", controller_type_, std::string(""));
         for (std::size_t i = 0; i < num_joints_; ++i)
         {
             // create joint state interface
             JointStateHandle jointStateHandle(joint_names_[i], &joint_position_[i], &joint_velocity_[i], &joint_effort_[i]);
             joint_state_interface_.registerHandle(jointStateHandle);
 
-            if (controller_type_.find("position_controllers") != std::string::npos)
-            {
-                // create joint command interface: position
-                JointHandle jointPositionHandle(jointStateHandle, &joint_position_command_[i]);
-                position_joint_interface_.registerHandle(jointPositionHandle);
-            }
-            else if (controller_type_.find("pos_vel_controllers") != std::string::npos)
-            {
-                // create joint command interface: position, velocity
-                PosVelJointHandle jointPosVelHandle(jointStateHandle,
-                    &joint_position_command_[i], &joint_velocity_command_[i]);
-                pos_vel_joint_interface_.registerHandle(jointPosVelHandle);               
-            }
-            else if (controller_type_.find("pos_vel_acc_controllers") != std::string::npos)
-            {
-                // create joint command interface: position, velocity, acceleration
-                PosVelAccJointHandle jointPosVelAccHandle(jointStateHandle,
-                    &joint_position_command_[i], &joint_velocity_command_[i], &joint_acceleration_command_[i]);
-                pos_vel_acc_joint_interface_.registerHandle(jointPosVelAccHandle);
-            }
+            // create joint command interface: position
+            JointHandle jointPositionHandle(jointStateHandle, &joint_position_command_[i]);
+            position_joint_interface_.registerHandle(jointPositionHandle);
+            scaled_controllers::ScaledJointHandle scaledPosJointHandle(jointStateHandle, &joint_position_command_[i], &velocity_scale_);
+            scaled_position_joint_interface_.registerHandle(scaledPosJointHandle);
+
+            // create joint command interface: position, velocity
+            PosVelJointHandle jointPosVelHandle(jointStateHandle,
+                &joint_position_command_[i], &joint_velocity_command_[i]);
+            pos_vel_joint_interface_.registerHandle(jointPosVelHandle);               
+
+            // create joint command interface: position, velocity, acceleration
+            PosVelAccJointHandle jointPosVelAccHandle(jointStateHandle,
+                &joint_position_command_[i], &joint_velocity_command_[i], &joint_acceleration_command_[i]);
+            pos_vel_acc_joint_interface_.registerHandle(jointPosVelAccHandle);
+
+            // create joint command interface: velocity
+            JointHandle jointVelocityHandle(jointStateHandle, &joint_velocity_command_[i]);
+            velocity_joint_interface_.registerHandle(jointVelocityHandle);
+            scaled_controllers::ScaledJointHandle scaledVelJointHandle(jointStateHandle, &joint_velocity_command_[i], &velocity_scale_);
+            scaled_velocity_joint_interface_.registerHandle(scaledVelJointHandle);
         }
         registerInterface(&joint_state_interface_);
-        if (controller_type_.find("position_controllers") != std::string::npos)
-        {
-            registerInterface(&position_joint_interface_);
-        }
-        else if (controller_type_.find("pos_vel_controllers") != std::string::npos)
-        {
-            registerInterface(&pos_vel_joint_interface_);
-        }
-        else if (controller_type_.find("pos_vel_acc_controllers") != std::string::npos)
-        {
-            registerInterface(&pos_vel_acc_joint_interface_);
-        }
+        registerInterface(&position_joint_interface_);
+        registerInterface(&scaled_position_joint_interface_);
+        registerInterface(&pos_vel_joint_interface_);
+        registerInterface(&pos_vel_acc_joint_interface_);
+        registerInterface(&velocity_joint_interface_);
+        registerInterface(&scaled_velocity_joint_interface_);
 
         // controller
         controller_manager_ = std::make_unique<controller_manager::ControllerManager>(this, *node_handle_);
 
         node_handle_->param("/whi_arm_interface/loop_hz", loop_hz_, 10.0);
         ros::Duration updateFreq = ros::Duration(1.0 / loop_hz_);
-        non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(updateFreq, std::bind(&JakaHardwareInterface::update, this, std::placeholders::_1)));
+        non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(
+            updateFreq, std::bind(&JakaHardwareInterface::update, this, std::placeholders::_1)));
     }
 
     void JakaHardwareInterface::update(const ros::TimerEvent& Event)
@@ -158,21 +153,17 @@ namespace whi_arm_hardware_interface
     {
         static bool init = true;
 
-        std::vector<double> positions;
+        bool res = true;
         if (jaka_api_instance_)
         {
-            positions = jaka_api_readPositions();
+            res = jaka_api_read();
         }
         else
         {
-            positions = jaka_tcp_readPositions();
+            res = jaka_tcp_read();
         }
 
-        for (std::size_t i = 0; i < std::min(joint_position_.size(), positions.size()); ++i)
-        {
-            joint_position_[i] = positions[i];
-        }
-        if (init && !positions.empty())
+        if (init && res)
         {
             joint_position_command_ = joint_position_;
             init = false;
@@ -214,6 +205,11 @@ namespace whi_arm_hardware_interface
         root["filter_type"] = 1;
         root["lpf_cf"] = 0.5;
         requests.push_back(Json::writeString(builder, root));
+        // {"cmdName":"rapid_rate","rate_value":1.0}
+        root.clear();
+        root["cmdName"] = "rapid_rate";
+        root["rate_value"] = velocity_scale_;
+        requests.push_back(Json::writeString(builder, root));
         // {"cmdName":"power_on"}
         root.clear();
         root["cmdName"] = "power_on";
@@ -253,7 +249,7 @@ namespace whi_arm_hardware_interface
         ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
     }
 
-    std::vector<double> JakaHardwareInterface::jaka_tcp_readPositions()
+    bool JakaHardwareInterface::jaka_tcp_read()
     {
         Json::Value root;
         Json::StreamWriterBuilder builder;
@@ -266,24 +262,34 @@ namespace whi_arm_hardware_interface
 
         ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
         auto read = ((DriverSocketJson*)drivers_map_[name_].get())->readParam(paramKey[JOINT_POS]);
-        for (auto& it : read)
+        if (!read.empty())
         {
-            it = angles::from_degrees(it);
+            for (std::size_t i = 0; i < std::min(joint_position_.size(), read.size()); ++i)
+            {
+                joint_position_[i] = angles::from_degrees(read[i]);
+            }
+
+    #ifdef DEBUG
+            std::cout << "read positions:";
+            for (const auto& it : joint_position_)
+            {
+                std::cout << it << ",";
+            }
+            std::cout << std::endl;
+    #endif
+
+            return true;
         }
-#ifdef DEBUG
-        std::cout << "read positions:";
-        for (const auto& it : read)
+        else
         {
-            std::cout << it << ",";
+            return false;
         }
-        std::cout << std::endl;
-#endif
-        return read;
     }
 
     void JakaHardwareInterface::jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration)
     {
         int stepNum = int(Duration / 0.008);
+        stepNum = (stepNum > 1e5 || stepNum == 0) ? 1 : stepNum;
 
         Json::Value root;
         Json::Value data;
@@ -322,10 +328,9 @@ namespace whi_arm_hardware_interface
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
             // set filter parameter
             jaka_api_instance_->servo_move_use_joint_LPF(0.5);
-
+            jaka_api_instance_->set_rapidrate(velocity_scale_);
             jaka_api_instance_->power_on();
             jaka_api_instance_->enable_robot();
-
             jaka_api_instance_->servo_move_enable(true);
 
             ROS_INFO_STREAM("JAKA driver is initialized successfully");
@@ -351,31 +356,36 @@ namespace whi_arm_hardware_interface
         }
     }
 
-    std::vector<double> JakaHardwareInterface::jaka_api_readPositions() const
+    bool JakaHardwareInterface::jaka_api_read()
     {
-        RobotStatus status;
-        jaka_api_instance_->get_robot_status(&status);
-
-        std::vector<double> positions;
-        for (const auto& it : status.joint_position)
+        JointValue jointPos;
+        if (jaka_api_instance_->get_joint_position(&jointPos) == ERR_SUCC)
         {
-            positions.push_back(it);
-        }
+            for (std::size_t i = 0; i < std::min(joint_position_.size(), sizeof(jointPos.jVal)); ++i)
+            {
+                joint_position_[i] = jointPos.jVal[i];
+            }
+
 #ifdef DEBUG
-        std::cout << "read positions:";
-        for (const auto& it : positions)
-        {
-            std::cout << it << ",";
-        }
-        std::cout << std::endl;
+            std::cout << "read positions:";
+            for (const auto& it : joint_position_)
+            {
+                std::cout << it << ",";
+            }
+            std::cout << std::endl;
 #endif
-
-        return positions;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     void JakaHardwareInterface::jaka_api_servoPositions(const std::vector<double>& Positions, double Duration)
     {
         int stepNum = int(Duration / 0.008);
+        stepNum = (stepNum > 1e5 || stepNum == 0) ? 1 : stepNum;
 
         JointValue positions;
         for (int i = 0; i < std::min(Positions.size(), sizeof(positions.jVal)); ++i)
