@@ -6,6 +6,7 @@ arm hardware interface
 
 * sockpp, refer to [its repository](https://github.com/fpagliughi/sockpp)
 * CRC++, refer to [its repository](https://github.com/d-bahr/CRCpp)
+* jsoncpp, refer to [its repository](https://github.com/open-source-parsers/jsoncpp)
 
 ## Permission for /dev/ttyama0
 
