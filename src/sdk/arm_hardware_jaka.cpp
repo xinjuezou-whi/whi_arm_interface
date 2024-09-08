@@ -167,18 +167,22 @@ namespace whi_arm_hardware_interface
         {
             joint_position_command_ = joint_position_;
             init = false;
+            initialized_ = true;
         }
     }
 
     void JakaHardwareInterface::write(ros::Duration ElapsedTime)
     {
-        if (jaka_api_instance_)
+        if (initialized_)
         {
-            jaka_api_servoPositions(joint_position_command_, ElapsedTime.toSec());
-        }
-        else
-        {
-            jaka_tcp_servoPositions(joint_position_command_, ElapsedTime.toSec());
+            if (jaka_api_instance_)
+            {
+                jaka_api_servoPositions(joint_position_command_, ElapsedTime.toSec());
+            }
+            else
+            {
+                jaka_tcp_servoPositions(joint_position_command_, ElapsedTime.toSec());
+            }
         }
     }
 
