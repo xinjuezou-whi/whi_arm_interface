@@ -107,15 +107,13 @@ void DriverSocket::setMotor()
 
 void DriverSocket::request(const std::vector<std::string>& Params)
 {
-	for (int i  = 0; i < Params.size(); )
+	for (const auto& it : Params)
 	{
-		if (sendCommand(Params[i]))
+		if (sendCommand(it))
 		{
 			std::vector<std::string> feedback = readFeedback();
 			if (!feedback.empty())
 			{
-				++i;
-
 				if (std::find(Params.begin(), Params.end(), feedback.front()) != Params.end())
 				{
 					std::vector<double> values;
@@ -129,8 +127,7 @@ void DriverSocket::request(const std::vector<std::string>& Params)
 		}
 		else
 		{
-			++i;
-			ROS_ERROR_STREAM("failed to send command " << Params[i]);
+			ROS_ERROR_STREAM("failed to send command " << it);
 		}
 	}
 }

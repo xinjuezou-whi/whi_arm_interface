@@ -41,7 +41,7 @@ public:
 
 public:
 	// specific
-	void request(const std::vector<std::string>& Params);
+	bool request(const std::vector<std::string>& Params);
 	std::vector<double> readParam(const std::string& Param);
 	bool sendCommand(const std::string& Command);
 	std::string readFeedback();

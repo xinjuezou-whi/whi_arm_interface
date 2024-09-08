@@ -63,34 +63,50 @@ void DriverSocketJson::cal_angularVel2PwmDuty()
 	// leave for override
 }
 
-void DriverSocketJson::request(const std::vector<std::string>& Params)
+bool DriverSocketJson::request(const std::vector<std::string>& Params)
 {
 	const std::string key("delay:");
 
-	for (int i = 0; i < Params.size(); )
+	bool res = true;
+	for (const auto& it : Params)
 	{
-		auto pos = Params[i].find(key);
+		auto pos = it.find(key);
 		if (pos != std::string::npos)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(Params[i].substr(pos + key.length()))));
-			++i;
+			std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(it.substr(pos + key.length()))));
 		}
 		else
 		{
-			if (sendCommand(Params[i]))
+			if (sendCommand(it))
 			{
-				if (!readFeedback().empty())
+				auto feedback = readFeedback();
+				if (!feedback.empty())
 				{
-					++i;
+					const auto rawJsonLength = static_cast<int>(feedback.length());
+					Json::CharReaderBuilder builder;
+					const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+					Json::Value root;
+					JSONCPP_STRING err;
+					reader->parse(feedback.c_str(), feedback.c_str() + rawJsonLength, &root, &err);
+
+					const Json::Value errorCode = root["errorCode"];
+
+					res &= (errorCode.asString() == "0");
+				}
+				else
+				{
+					res &= false;
 				}
 			}
 			else
 			{
-				++i;
-				ROS_ERROR_STREAM("failed to send command " << Params[i]);
+				res &= false;
+				ROS_ERROR_STREAM("failed to send command " << it);
 			}
 		}
 	}
+
+	return res;
 }
 
 std::vector<double> DriverSocketJson::readParam(const std::string& Param)

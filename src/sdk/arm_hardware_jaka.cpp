@@ -206,8 +206,6 @@ namespace whi_arm_hardware_interface
 
     bool JakaHardwareInterface::jaka_tcp_init()
     {
-        bool res = true;
-
         ((DriverSocketJson*)drivers_map_[name_].get())->setParamsKey(paramKey, PARAM_KEY_SUM);
 
         Json::Value root;
@@ -254,9 +252,7 @@ namespace whi_arm_hardware_interface
         root["relFlag"] = 1;
         requests.push_back(Json::writeString(builder, root));
 
-        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
-
-        return res;
+        return ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
     }
 
     void JakaHardwareInterface::jaka_tcp_close()
@@ -346,7 +342,10 @@ namespace whi_arm_hardware_interface
         root["stepNum"] = stepNum;
         requests.push_back(Json::writeString(builder, root));
 
-        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        if (!((DriverSocketJson*)drivers_map_[name_].get())->request(requests))
+        {
+            ROS_WARN_STREAM("failed to execute servo_j motion");
+        }
     }
 
     bool JakaHardwareInterface::jaka_tcp_setIo(int Addr, int Level)
@@ -364,9 +363,7 @@ namespace whi_arm_hardware_interface
         root["value"] = Level;
         requests.push_back(Json::writeString(builder, root));
 
-        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
-
-        return true;
+        return ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
     }
 
     bool JakaHardwareInterface::jaka_api_init(const std::string& Addr)
