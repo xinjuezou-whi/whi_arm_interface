@@ -59,6 +59,8 @@ namespace whi_arm_hardware_interface
         std::string controller_type_{ "position" };
         std::unique_ptr<JAKAZuRobot> jaka_api_instance_{ nullptr };
         double velocity_scale_{ 1.0 };
+        double payload_weight_{ 0.0 };
+        std::vector<double> payload_to_tcp_;
         bool initialized_{ false };
     };
 }

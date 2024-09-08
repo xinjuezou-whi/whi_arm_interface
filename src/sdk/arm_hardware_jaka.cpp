@@ -62,6 +62,18 @@ namespace whi_arm_hardware_interface
 
         // drivers
         node_handle_->param("/whi_arm_interface/velocity_scale", velocity_scale_, 1.0);
+        node_handle_->param("/whi_arm_interface/payload_weight", payload_weight_, 0.0);
+        if (node_handle_->getParam("/whi_arm_interface/payload_to_tcp", payload_to_tcp_))
+        {
+            for (auto& it : payload_to_tcp_)
+            {
+                it *= 1000.0; // JAKA requires mm
+            }
+        }
+        else
+        {
+            payload_to_tcp_.resize(3);
+        }
         node_handle_->param("/whi_arm_interface/hardware", name_, std::string(hardware[SOCKET]));
         if (name_ == hardware[SOCKET])
         {
@@ -214,6 +226,15 @@ namespace whi_arm_hardware_interface
         root["cmdName"] = "rapid_rate";
         root["rate_value"] = velocity_scale_;
         requests.push_back(Json::writeString(builder, root));
+        // {"cmdName":"set_tool_payload","mass":weight,"centroid":[x,y,z]}
+        root.clear();
+        root["cmdName"] = "set_tool_payload";
+        root["mass"] = payload_weight_;
+        for (const auto& it : payload_to_tcp_)
+        {
+            root["centroid"].append(it);
+        }
+        requests.push_back(Json::writeString(builder, root));
         // {"cmdName":"power_on"}
         root.clear();
         root["cmdName"] = "power_on";
@@ -333,6 +354,12 @@ namespace whi_arm_hardware_interface
             // set filter parameter
             jaka_api_instance_->servo_move_use_joint_LPF(0.5);
             jaka_api_instance_->set_rapidrate(velocity_scale_);
+            PayLoad payload;
+            payload.mass = payload_weight_;
+            payload.centroid.x = payload_to_tcp_[0];
+            payload.centroid.y = payload_to_tcp_[1];
+            payload.centroid.z = payload_to_tcp_[2];
+            jaka_api_instance_->set_payload(&payload);
             jaka_api_instance_->power_on();
             jaka_api_instance_->enable_robot();
             jaka_api_instance_->servo_move_enable(true);
