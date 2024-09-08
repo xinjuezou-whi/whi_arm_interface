@@ -21,6 +21,7 @@ Changelog:
 ******************************************************************/
 #pragma once
 #include "whi_arm_hardware_base.h"
+#include "whi_interfaces/WhiSrvIo.h"
 #include "jakaAPI/JAKAZuRobot.h"
 
 namespace whi_arm_hardware_interface
@@ -45,11 +46,15 @@ namespace whi_arm_hardware_interface
         void jaka_tcp_close();
         bool jaka_tcp_read();
         void jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration);
+        bool jaka_tcp_setIo(int Addr, int Level);
         // jakaAPI related
         bool jaka_api_init(const std::string& Addr);
         void jaka_api_close();
         bool jaka_api_read();
         void jaka_api_servoPositions(const std::vector<double>& Positions, double Duration);
+        bool jaka_api_setIo(int Addr, int Level);
+        bool onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
+            whi_interfaces::WhiSrvIo::Response& Response);
 
     protected:
         enum HomingState { STA_TO_HOME = 0, STA_HOMING, STA_HOMED };
@@ -62,5 +67,6 @@ namespace whi_arm_hardware_interface
         double payload_weight_{ 0.0 };
         std::vector<double> payload_to_tcp_;
         bool initialized_{ false };
+        std::unique_ptr<ros::ServiceServer> service_io_{ nullptr };
     };
 }

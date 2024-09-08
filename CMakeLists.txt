@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   transmission_interface
   serial
+  whi_interfaces
 )
 
 ## System dependencies are found with CMake's conventions

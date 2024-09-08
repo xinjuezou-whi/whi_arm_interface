@@ -61,6 +61,7 @@ namespace whi_arm_hardware_interface
         }
 
         // drivers
+        bool res = false;
         node_handle_->param("/whi_arm_interface/velocity_scale", velocity_scale_, 1.0);
         node_handle_->param("/whi_arm_interface/payload_weight", payload_weight_, 0.0);
         if (node_handle_->getParam("/whi_arm_interface/payload_to_tcp", payload_to_tcp_))
@@ -83,18 +84,23 @@ namespace whi_arm_hardware_interface
             node_handle_->param("/whi_arm_interface/socket/addr", addr, std::string("10.5.5.1"));
             drivers_map_.emplace(name_, std::make_unique<DriverSocketJson>(name_, addr, 10001));
 
-            jaka_tcp_init();
+            res = jaka_tcp_init();
         }
         else if (name_ == hardware[JAKA_API])
         {
             std::string addr;
             node_handle_->param("/whi_arm_interface/jaka_api/addr", addr, std::string("10.5.5.1"));
 
-            jaka_api_init(addr);
+            res = jaka_api_init(addr);
         }
         else
         {
             ROS_ERROR_STREAM("failed to init driver of " << name_);
+        }
+        if (res)
+        {
+            service_io_ = std::make_unique<ros::ServiceServer>(
+                node_handle_->advertiseService("arm_io", &JakaHardwareInterface::onServiceIo, this));
         }
 
         // resize vectors
@@ -343,6 +349,26 @@ namespace whi_arm_hardware_interface
         ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
     }
 
+    bool JakaHardwareInterface::jaka_tcp_setIo(int Addr, int Level)
+    {
+        Json::Value root;
+        Json::Value data;
+        Json::StreamWriterBuilder builder;
+        builder["indentation"] = "";
+
+        std::vector<std::string> requests;
+        // {"cmdName":"set_digital_output","type":0,"index":1,"value":1}
+        root["cmdName"] = "set_digital_output";
+        root["type"] = 0; // 0 stands for IO on controller
+        root["index"] = Addr;
+        root["value"] = Level;
+        requests.push_back(Json::writeString(builder, root));
+
+        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+
+        return true;
+    }
+
     bool JakaHardwareInterface::jaka_api_init(const std::string& Addr)
     {
         bool res = true;
@@ -378,13 +404,10 @@ namespace whi_arm_hardware_interface
 
     void JakaHardwareInterface::jaka_api_close()
     {
-        if (jaka_api_instance_)
-        {
-            jaka_api_instance_->servo_move_enable(false);
-            jaka_api_instance_->disable_robot();
-            jaka_api_instance_->power_off();
-            jaka_api_instance_->login_out();
-        }
+        jaka_api_instance_->servo_move_enable(false);
+        jaka_api_instance_->disable_robot();
+        jaka_api_instance_->power_off();
+        jaka_api_instance_->login_out();
     }
 
     bool JakaHardwareInterface::jaka_api_read()
@@ -437,5 +460,39 @@ namespace whi_arm_hardware_interface
         {
             ROS_WARN_STREAM("failed to execute servo_j motion with error code: " << res);
         }
+    }
+
+    bool JakaHardwareInterface::jaka_api_setIo(int Addr, int Level)
+    {
+        return jaka_api_instance_->set_digital_output(IO_CABINET, Addr - 1, Level) == ERR_SUCC;
+    }
+
+    bool JakaHardwareInterface::onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
+        whi_interfaces::WhiSrvIo::Response& Response)
+    {
+        if (Request.addr < 1 || Request.addr > 7)
+        {
+            Response.result = false;
+        }
+        else
+        {
+            if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_READ)
+            {
+                Response.result = false;
+            }
+            else if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_WRITE)
+            {
+                if (jaka_api_instance_)
+                {
+                    Response.result = jaka_api_setIo(Request.addr, Request.level);
+                }
+                else
+                {
+                    Response.result = jaka_tcp_setIo(Request.addr, Request.level);
+                }
+            }
+        }
+
+        return Response.result;
     }
 }
