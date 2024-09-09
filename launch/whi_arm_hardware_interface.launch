@@ -13,6 +13,10 @@
 
   <!-- Load universal robot description format (URDF) -->
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg description_pkg)/urdf/$(arg arm)_$(arg arm_model).urdf.xacro"/>
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+    <param name="publish_frequency" type="double" value="50.0"/>
+    <param name="tf_prefix" value=""/>
+  </node>
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
     <rosparam param="source_list">["/whi_arm_interface/joint_states"]</rosparam>
   </node>
