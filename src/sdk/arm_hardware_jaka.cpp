@@ -104,6 +104,9 @@ namespace whi_arm_hardware_interface
         }
         if (res)
         {
+            // advertise arm ready service
+            server_ready_ = std::make_unique<ros::ServiceServer>(
+                node_handle_->advertiseService("arm_ready", &JakaHardwareInterface::onServiceReady, this));            
             // advertise io service
             service_io_ = std::make_unique<ros::ServiceServer>(
                 node_handle_->advertiseService("arm_io", &JakaHardwareInterface::onServiceIo, this));
@@ -197,7 +200,7 @@ namespace whi_arm_hardware_interface
         {
             joint_position_command_ = joint_position_;
             init = false;
-            initialized_ = true;
+            standby_ = true;
         }
 
         whi_interfaces::WhiMotionState msg;
@@ -217,7 +220,7 @@ namespace whi_arm_hardware_interface
 
     void JakaHardwareInterface::write(ros::Duration ElapsedTime)
     {
-        if (initialized_)
+        if (standby_)
         {
             if (jaka_api_instance_)
             {
@@ -551,6 +554,11 @@ namespace whi_arm_hardware_interface
         jaka_api_instance_->is_in_collision(&res);
 
         return res;
+    }
+
+    bool JakaHardwareInterface::onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response)
+    {
+        return (Response.success = standby_);
     }
 
     bool JakaHardwareInterface::onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,

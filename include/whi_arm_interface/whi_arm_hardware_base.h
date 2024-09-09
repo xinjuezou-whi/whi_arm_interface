@@ -94,5 +94,8 @@ namespace whi_arm_hardware_interface
 
 		// driver
 		std::map<std::string, std::unique_ptr<DriverBase>> drivers_map_;
+		std::unique_ptr<ros::ServiceServer> service_io_{ nullptr };
+        std::unique_ptr<ros::ServiceServer> server_ready_{ nullptr };
+        std::unique_ptr<ros::Publisher> pub_motion_state_{ nullptr };
 	};
 }

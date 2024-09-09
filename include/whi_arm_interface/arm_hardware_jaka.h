@@ -22,6 +22,7 @@ Changelog:
 #pragma once
 #include "whi_arm_hardware_base.h"
 #include "whi_interfaces/WhiSrvIo.h"
+#include <std_srvs/Trigger.h>
 #include "jakaAPI/JAKAZuRobot.h"
 
 namespace whi_arm_hardware_interface
@@ -58,6 +59,7 @@ namespace whi_arm_hardware_interface
         bool jaka_api_servoPositions(const std::vector<double>& Positions, double Duration);
         bool jaka_api_setIo(int Addr, int Level);
         bool jake_api_isProtective();
+        bool onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response);
         bool onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
             whi_interfaces::WhiSrvIo::Response& Response);
 
@@ -71,9 +73,7 @@ namespace whi_arm_hardware_interface
         double velocity_scale_{ 1.0 };
         double payload_weight_{ 0.0 };
         std::vector<double> payload_to_tcp_;
-        bool initialized_{ false };
-        std::unique_ptr<ros::ServiceServer> service_io_{ nullptr };
-        std::unique_ptr<ros::Publisher> pub_motion_state_{ nullptr };
+        bool standby_{ false };
         int tcp_resend_max_{ 0 };
     };
 }
