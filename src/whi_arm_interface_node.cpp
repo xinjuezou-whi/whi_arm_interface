@@ -35,12 +35,13 @@ void signalHandler(int Signal)
 int main(int argc, char** argv)
 {
 	/// node version and copyright announcement
-	std::cout << "\nWHI arm interface VERSION 03.01.6" << std::endl;
+	std::cout << "\nWHI arm interface VERSION 03.01.7" << std::endl;
 	std::cout << "Copyright © 2022-2025 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
 	/// ros infrastructure
-	ros::init(argc, argv, "whi_arm_interface");
-	auto nodeHandle = std::make_shared<ros::NodeHandle>();
+	const std::string nodeName("whi_arm_interface");
+	ros::init(argc, argv, nodeName);
+	auto nodeHandle = std::make_shared<ros::NodeHandle>(nodeName);
 
 	/// node logic
 	ros::NodeHandle nhPrivate("~");
@@ -83,7 +84,7 @@ int main(int argc, char** argv)
 	spinner.spin();
 #endif
 
-	std::cout << "whi_arm_interface exited" << std::endl;
+	std::cout << nodeName << " exited" << std::endl;
 
 	return 0;
 }

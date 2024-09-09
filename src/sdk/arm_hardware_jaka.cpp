@@ -52,7 +52,7 @@ namespace whi_arm_hardware_interface
     void JakaHardwareInterface::init()
     {
         // joints
-        node_handle_->getParam("/jaka_arm/joints", joint_names_);
+        node_handle_->getParam("joints", joint_names_);
         if (joint_names_.size() == 0)
         {
             // especially for rosrun mode
@@ -68,9 +68,9 @@ namespace whi_arm_hardware_interface
 
         // drivers
         bool res = false;
-        node_handle_->param("/whi_arm_interface/velocity_scale", velocity_scale_, 1.0);
-        node_handle_->param("/whi_arm_interface/payload_weight", payload_weight_, 0.0);
-        if (node_handle_->getParam("/whi_arm_interface/payload_to_tcp", payload_to_tcp_))
+        node_handle_->param("velocity_scale", velocity_scale_, 1.0);
+        node_handle_->param("payload_weight", payload_weight_, 0.0);
+        if (node_handle_->getParam("payload_to_tcp", payload_to_tcp_))
         {
             for (auto& it : payload_to_tcp_)
             {
@@ -81,12 +81,12 @@ namespace whi_arm_hardware_interface
         {
             payload_to_tcp_.resize(3);
         }
-        node_handle_->param("/whi_arm_interface/hardware", name_, std::string(hardware[SOCKET]));
+        node_handle_->param("hardware", name_, std::string(hardware[SOCKET]));
         if (name_ == hardware[SOCKET])
         {
             std::string addr;
-            node_handle_->param("/whi_arm_interface/socket/addr", addr, std::string("10.5.5.1"));
-            node_handle_->param("/whi_arm_interface/socket/resent_max", tcp_resend_max_, 0);
+            node_handle_->param("socket/addr", addr, std::string("10.5.5.1"));
+            node_handle_->param("socket/resent_max", tcp_resend_max_, 0);
             drivers_map_.emplace(name_, std::make_unique<DriverSocketJson>(name_, addr, 10001));
 
             res = jaka_tcp_init();
@@ -94,7 +94,7 @@ namespace whi_arm_hardware_interface
         else if (name_ == hardware[JAKA_API])
         {
             std::string addr;
-            node_handle_->param("/whi_arm_interface/jaka_api/addr", addr, std::string("10.5.5.1"));
+            node_handle_->param("jaka_api/addr", addr, std::string("10.5.5.1"));
 
             res = jaka_api_init(addr);
         }
@@ -162,7 +162,7 @@ namespace whi_arm_hardware_interface
         // controller
         controller_manager_ = std::make_unique<controller_manager::ControllerManager>(this, *node_handle_);
 
-        node_handle_->param("/whi_arm_interface/loop_hz", loop_hz_, 10.0);
+        node_handle_->param("loop_hz", loop_hz_, 10.0);
         ros::Duration updateFreq = ros::Duration(1.0 / loop_hz_);
         non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(
             updateFreq, std::bind(&JakaHardwareInterface::update, this, std::placeholders::_1)));

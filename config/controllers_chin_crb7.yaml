@@ -1,4 +1,4 @@
-chin_arm:
+whi_arm_interface:
   joints: &robot_joints
     - chin_joint_1 #1
     - chin_joint_2 #3

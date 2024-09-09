@@ -39,12 +39,8 @@ namespace whi_arm_hardware_interface
             const std::string& Accelerations) const;
 
     protected:
-        enum HomingState { STA_TO_HOME = 0, STA_HOMING, STA_HOMED };
-
-    protected:
         const std::string name_{ "socket" };
         std::string controller_type_{ "position" };
-        int homing_state_{ STA_HOMED };
         double speed_rate_{ 0.5 };
         std::vector<double> forward_dirs_;
         std::vector<double> angulars_;

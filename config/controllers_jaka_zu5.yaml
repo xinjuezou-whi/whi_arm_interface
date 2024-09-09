@@ -1,4 +1,4 @@
-jaka_arm:
+whi_arm_interface:
   joints: &robot_joints
     - joint_1
     - joint_2

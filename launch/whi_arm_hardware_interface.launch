@@ -1,8 +1,6 @@
 <?xml version="1.0"?>
 <launch>
   <!-- argument -->
-  <arg name="home" default="false"/>
-  <arg name="close_loop" default="true"/>
   <arg name="arm" default="chin"/>
   <arg name="arm_model" default="frame"/>
   <arg name="config_pkg" default="$(eval '$(find ' + arg('arm') + '_' + arg('arm_model') + '_moveit_config)')"/>
@@ -15,14 +13,15 @@
 
   <!-- Load universal robot description format (URDF) -->
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg description_pkg)/urdf/$(arg arm)_$(arg arm_model).urdf.xacro"/>
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <rosparam param="source_list">["/whi_arm_interface/joint_states"]</rosparam>
+  </node>
 
   <!-- The semantic description that corresponds to the URDF -->
   <param name="robot_description_semantic" textfile="$(arg config_pkg)/config/$(arg arm)_$(arg arm_model).srdf"/>
 
   <!-- Start hardware_interface node -->
   <node name="whi_arm_interface" pkg="whi_arm_interface" type="whi_arm_interface_node" output="screen">
-    <param name="home" type="bool" value="$(arg home)"/>
-    <param name="close_loop" type="bool" value="$(arg close_loop)"/>
     <param name="arm" value="$(arg arm)"/>
   </node>
 
@@ -35,7 +34,7 @@
   </group>
 
   <!-- Start controllers -->
-  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="/" 
-        args="/$(arg arm)_arm/controllers/state
-	            /$(arg arm)_arm/controllers/scaled_pos_controller"/>
+  <node ns="whi_arm_interface" name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"
+        args="controllers/state
+	            controllers/scaled_pos_controller"/>
 </launch>

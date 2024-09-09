@@ -43,13 +43,8 @@ namespace whi_arm_hardware_interface
 
     void ChinHardwareInterface::init()
     {
-        ros::NodeHandle nh_private("~");
-        bool toHome;
-        nh_private.param("home", toHome, false);
-        homing_state_ = toHome ? STA_TO_HOME : STA_HOMED;
-
         // joints
-        node_handle_->getParam("/chin_arm/joints", joint_names_);
+        node_handle_->getParam("joints", joint_names_);
         if (joint_names_.size() == 0)
         {
             // especially for rosrun mode
@@ -64,20 +59,20 @@ namespace whi_arm_hardware_interface
         }
 
         // drivers
-        node_handle_->getParam("/whi_arm/hardware_interface/forward_dirs", forward_dirs_);
-        node_handle_->param("/whi_arm/hardware_interface/speed_rate", speed_rate_, 50.0);
+        node_handle_->getParam("forward_dirs", forward_dirs_);
+        node_handle_->param("speed_rate", speed_rate_, 50.0);
         speed_rate_ /= 100.0;
-        node_handle_->getParam("/whi_arm/hardware_interface/angular_velocities", angulars_);
-        node_handle_->getParam("/whi_arm/hardware_interface/angular_accelerations", accelerations_);
+        node_handle_->getParam("angular_velocities", angulars_);
+        node_handle_->getParam("angular_accelerations", accelerations_);
         std::string hardwareStr;
-        node_handle_->param("/whi_arm/hardware_interface/hardware", hardwareStr, std::string(hardware[SOCKET]));
+        node_handle_->param("hardware", hardwareStr, std::string(hardware[SOCKET]));
         if (hardwareStr == hardware[SOCKET])
         {
             std::string addr;
             int port;
             int dataLength;
-            node_handle_->param("/whi_arm/hardware_interface/socket/addr", addr, std::string("192.168.4.44"));
-            node_handle_->param("/whi_arm/hardware_interface/socket/port", port, 8888);
+            node_handle_->param("socket/addr", addr, std::string("192.168.4.44"));
+            node_handle_->param("socket/port", port, 8888);
             drivers_map_.emplace(name_, std::make_unique<DriverSocket>(name_, addr, port));
             ((DriverSocket*)drivers_map_[name_].get())->setMotor();
         }
@@ -125,7 +120,7 @@ namespace whi_arm_hardware_interface
         // controller
         controller_manager_ = std::make_unique<controller_manager::ControllerManager>(this, *node_handle_);
 
-        node_handle_->param("/whi_arm/hardware_interface/loop_hz", loop_hz_, 10.0);
+        node_handle_->param("loop_hz", loop_hz_, 10.0);
         ros::Duration updateFreq = ros::Duration(1.0 / loop_hz_);
         non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(updateFreq, std::bind(&ChinHardwareInterface::update, this, std::placeholders::_1)));
     }

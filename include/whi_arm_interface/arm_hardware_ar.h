@@ -57,6 +57,6 @@ namespace whi_arm_hardware_interface
         int acc_rate_{ 10 };
         int dec_duration_{ 20 };
         int dec_rate_{ 5 };
-        bool mode_close_loop_{ true };
+        bool mode_close_{ true };
     };
 }
