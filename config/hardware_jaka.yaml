@@ -6,5 +6,6 @@ whi_arm_interface:
   hardware: socket #jaka_api
   socket:
     addr: 10.5.5.100
+    resent_max: 1
   jaka_api:
     addr: 10.5.5.100

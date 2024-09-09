@@ -16,6 +16,7 @@ All text above must be included in any redistribution.
 #include "whi_arm_interface/driver_socket_json.h"
 #include "whi_arm_interface/jakaAPI/jkerr.h"
 #include "whi_arm_interface/jakaAPI/jktypes.h"
+#include "whi_interfaces/WhiMotionState.h"
 #include <json/json.h>
 #include <angles/angles.h>
 
@@ -31,7 +32,7 @@ namespace whi_arm_hardware_interface
         init();
     }
 
-    JakaHardwareInterface::~JakaHardwareInterface()
+    void JakaHardwareInterface::quit()
     {
         if (jaka_api_instance_)
         {
@@ -41,6 +42,11 @@ namespace whi_arm_hardware_interface
         {
             jaka_tcp_close();
         }
+    }
+
+    JakaHardwareInterface::~JakaHardwareInterface()
+    {
+        quit();
     }
 
     void JakaHardwareInterface::init()
@@ -79,9 +85,8 @@ namespace whi_arm_hardware_interface
         if (name_ == hardware[SOCKET])
         {
             std::string addr;
-            int port;
-            int dataLength;
             node_handle_->param("/whi_arm_interface/socket/addr", addr, std::string("10.5.5.1"));
+            node_handle_->param("/whi_arm_interface/socket/resent_max", tcp_resend_max_, 0);
             drivers_map_.emplace(name_, std::make_unique<DriverSocketJson>(name_, addr, 10001));
 
             res = jaka_tcp_init();
@@ -99,8 +104,12 @@ namespace whi_arm_hardware_interface
         }
         if (res)
         {
+            // advertise io service
             service_io_ = std::make_unique<ros::ServiceServer>(
                 node_handle_->advertiseService("arm_io", &JakaHardwareInterface::onServiceIo, this));
+            // create state publisher
+            pub_motion_state_ = std::make_unique<ros::Publisher>(
+                node_handle_->advertise<whi_interfaces::WhiMotionState>("arm_motion_state", 1));
         }
 
         // resize vectors
@@ -171,14 +180,17 @@ namespace whi_arm_hardware_interface
     {
         static bool init = true;
 
-        bool res = true;
+        bool res = true, isProtective = false;
         if (jaka_api_instance_)
         {
             res = jaka_api_read();
+            // only get_robot_status is multi-thread safe, therefore taking synchronous mech
+            isProtective = jake_api_isProtective();
         }
         else
         {
             res = jaka_tcp_read();
+            isProtective = jake_tcp_isProtective();
         }
 
         if (init && res)
@@ -186,6 +198,20 @@ namespace whi_arm_hardware_interface
             joint_position_command_ = joint_position_;
             init = false;
             initialized_ = true;
+        }
+
+        whi_interfaces::WhiMotionState msg;
+        if (isProtective)
+        {
+            msg.state = whi_interfaces::WhiMotionState::STA_FAULT;
+        }
+        else
+        {
+            msg.state = whi_interfaces::WhiMotionState::STA_STANDBY;
+        }
+        if (pub_motion_state_)
+        {
+            pub_motion_state_->publish(msg);
         }
     }
 
@@ -252,7 +278,29 @@ namespace whi_arm_hardware_interface
         root["relFlag"] = 1;
         requests.push_back(Json::writeString(builder, root));
 
-        return ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        std::vector<int> res = ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        for (std::vector<int>::const_iterator it = res.begin(); it != res.end(); )
+        {
+            int count = 0;
+            std::vector<int> resendRes;
+            while (count++ < tcp_resend_max_)
+            {
+                std::vector<std::string> resendRequest = { requests[*it] };
+                resendRes = ((DriverSocketJson*)drivers_map_[name_].get())->request(resendRequest);
+                if (resendRes.empty())
+                {
+                    res.erase(it);
+                    break;
+                }
+            } 
+
+            if (!resendRes.empty())
+            {
+                ++it;
+            }
+        }
+
+        return res.empty();
     }
 
     void JakaHardwareInterface::jaka_tcp_close()
@@ -313,7 +361,7 @@ namespace whi_arm_hardware_interface
         }
     }
 
-    void JakaHardwareInterface::jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration)
+    bool JakaHardwareInterface::jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration)
     {
         int stepNum = int(Duration / 0.008);
         stepNum = (stepNum > 1e5 || stepNum == 0) ? 1 : stepNum;
@@ -342,10 +390,12 @@ namespace whi_arm_hardware_interface
         root["stepNum"] = stepNum;
         requests.push_back(Json::writeString(builder, root));
 
-        if (!((DriverSocketJson*)drivers_map_[name_].get())->request(requests))
+        auto res = ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        if (!res.empty())
         {
             ROS_WARN_STREAM("failed to execute servo_j motion");
         }
+        return res.empty();
     }
 
     bool JakaHardwareInterface::jaka_tcp_setIo(int Addr, int Level)
@@ -363,7 +413,36 @@ namespace whi_arm_hardware_interface
         root["value"] = Level;
         requests.push_back(Json::writeString(builder, root));
 
-        return ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        auto res = ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        if (!res.empty())
+        {
+            ROS_WARN_STREAM("failed to execute set digital output");
+        }
+        return res.empty();
+    }
+
+    bool JakaHardwareInterface::jake_tcp_isProtective()
+    {
+        Json::Value root;
+        Json::Value data;
+        Json::StreamWriterBuilder builder;
+        builder["indentation"] = "";
+
+        std::vector<std::string> requests;
+        // {"cmdName":"protective_stop_status"}
+        root["cmdName"] = "protective_stop_status";
+        requests.push_back(Json::writeString(builder, root));
+
+        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        auto read = ((DriverSocketJson*)drivers_map_[name_].get())->readParam(paramKey[PROTECTIVE_STOP]);
+        if (read.empty())
+        {
+            return false;
+        }
+        else
+        {
+            return read.front() > 0.0;
+        }
     }
 
     bool JakaHardwareInterface::jaka_api_init(const std::string& Addr)
@@ -433,7 +512,7 @@ namespace whi_arm_hardware_interface
         }
     }
 
-    void JakaHardwareInterface::jaka_api_servoPositions(const std::vector<double>& Positions, double Duration)
+    bool JakaHardwareInterface::jaka_api_servoPositions(const std::vector<double>& Positions, double Duration)
     {
         int stepNum = int(Duration / 0.008);
         stepNum = (stepNum > 1e5 || stepNum == 0) ? 1 : stepNum;
@@ -457,11 +536,21 @@ namespace whi_arm_hardware_interface
         {
             ROS_WARN_STREAM("failed to execute servo_j motion with error code: " << res);
         }
+
+        return res == ERR_SUCC;
     }
 
     bool JakaHardwareInterface::jaka_api_setIo(int Addr, int Level)
     {
         return jaka_api_instance_->set_digital_output(IO_CABINET, Addr - 1, Level) == ERR_SUCC;
+    }
+
+    bool JakaHardwareInterface::jake_api_isProtective()
+    {
+        BOOL res = FALSE;
+        jaka_api_instance_->is_in_collision(&res);
+
+        return res;
     }
 
     bool JakaHardwareInterface::onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,

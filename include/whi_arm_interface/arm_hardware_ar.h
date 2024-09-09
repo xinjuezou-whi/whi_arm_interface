@@ -26,7 +26,10 @@ namespace whi_arm_hardware_interface
     {
     public:
         ArHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle);
-        ~ArHardwareInterface() = default;
+        virtual ~ArHardwareInterface() = default;
+
+    public:
+        void quit() override;
 
     protected:
         void init();

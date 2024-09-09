@@ -27,7 +27,6 @@ class DriverSocketJson : public DriverBase
 {
 public:
 	DriverSocketJson() = delete;
-	DriverSocketJson(const std::string& JointName);
 	DriverSocketJson(const std::string& JointName, const std::string& Addr, int Port);
 	~DriverSocketJson() override;
 
@@ -41,7 +40,7 @@ public:
 
 public:
 	// specific
-	bool request(const std::vector<std::string>& Params);
+	std::vector<int> request(const std::vector<std::string>& Params);
 	std::vector<double> readParam(const std::string& Param);
 	bool sendCommand(const std::string& Command);
 	std::string readFeedback();

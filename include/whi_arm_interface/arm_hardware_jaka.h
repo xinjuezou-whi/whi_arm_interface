@@ -29,12 +29,15 @@ namespace whi_arm_hardware_interface
     class JakaHardwareInterface : public ArmHardware
     {
     protected:
-        enum ParamKey { JOINT_POS = 0, PARAM_KEY_SUM };
-        static constexpr const char* paramKey[PARAM_KEY_SUM] = { "joint_pos" };
+        enum ParamKey { JOINT_POS = 0, PROTECTIVE_STOP, PARAM_KEY_SUM };
+        static constexpr const char* paramKey[PARAM_KEY_SUM] = { "joint_pos", "protective_stop" };
 
     public:
         JakaHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle);
-        ~JakaHardwareInterface();
+        virtual ~JakaHardwareInterface();
+
+    public:
+        void quit() override;
 
     protected:
         void init();
@@ -45,14 +48,16 @@ namespace whi_arm_hardware_interface
         bool jaka_tcp_init();
         void jaka_tcp_close();
         bool jaka_tcp_read();
-        void jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration);
+        bool jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration);
         bool jaka_tcp_setIo(int Addr, int Level);
+        bool jake_tcp_isProtective();
         // jakaAPI related
         bool jaka_api_init(const std::string& Addr);
         void jaka_api_close();
         bool jaka_api_read();
-        void jaka_api_servoPositions(const std::vector<double>& Positions, double Duration);
+        bool jaka_api_servoPositions(const std::vector<double>& Positions, double Duration);
         bool jaka_api_setIo(int Addr, int Level);
+        bool jake_api_isProtective();
         bool onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
             whi_interfaces::WhiSrvIo::Response& Response);
 
@@ -68,5 +73,7 @@ namespace whi_arm_hardware_interface
         std::vector<double> payload_to_tcp_;
         bool initialized_{ false };
         std::unique_ptr<ros::ServiceServer> service_io_{ nullptr };
+        std::unique_ptr<ros::Publisher> pub_motion_state_{ nullptr };
+        int tcp_resend_max_{ 0 };
     };
 }

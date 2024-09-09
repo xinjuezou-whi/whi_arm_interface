@@ -45,7 +45,10 @@ namespace whi_arm_hardware_interface
 	public:
 		ArmHardware() = delete;
 		ArmHardware(std::shared_ptr<ros::NodeHandle>& NodeHandle) : node_handle_(NodeHandle) {};
-		virtual ~ArmHardware() {};
+		virtual ~ArmHardware() = default;
+
+	public:
+		virtual void quit() = 0;
 
 	protected:
 		std::shared_ptr<ros::NodeHandle> node_handle_{ nullptr };

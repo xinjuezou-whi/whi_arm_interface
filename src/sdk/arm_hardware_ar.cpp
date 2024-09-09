@@ -30,6 +30,11 @@ namespace whi_arm_hardware_interface
         init();
     }
 
+    void ArHardwareInterface::quit()
+    {
+        
+    }
+
     void ArHardwareInterface::init()
     {
         ros::NodeHandle nh_private("~");

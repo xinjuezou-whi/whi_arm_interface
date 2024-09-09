@@ -25,6 +25,9 @@ namespace whi_arm_hardware_interface
     public:
         ChinHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle);
         virtual ~ChinHardwareInterface();
+    
+    public:
+        void quit() override;
 
     protected:
         void init();

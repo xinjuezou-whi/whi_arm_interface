@@ -21,12 +21,6 @@ All text above must be included in any redistribution.
 
 #include <thread>
 
-DriverSocketJson::DriverSocketJson(const std::string& JointName)
-	: DriverBase(JointName)
-{
-
-}
-
 DriverSocketJson::DriverSocketJson(const std::string& JointName, const std::string& Addr, int Port)
 	: DriverBase(JointName), addr_(Addr), port_(Port)
 {
@@ -63,21 +57,22 @@ void DriverSocketJson::cal_angularVel2PwmDuty()
 	// leave for override
 }
 
-bool DriverSocketJson::request(const std::vector<std::string>& Params)
+std::vector<int> DriverSocketJson::request(const std::vector<std::string>& Params)
 {
 	const std::string key("delay:");
 
-	bool res = true;
-	for (const auto& it : Params)
+	std::vector<int> res;
+
+	for (int i = 0; i < Params.size(); ++i)
 	{
-		auto pos = it.find(key);
+		auto pos = Params[i].find(key);
 		if (pos != std::string::npos)
 		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(it.substr(pos + key.length()))));
+			std::this_thread::sleep_for(std::chrono::milliseconds(std::stoi(Params[i].substr(pos + key.length()))));
 		}
 		else
 		{
-			if (sendCommand(it))
+			if (sendCommand(Params[i]))
 			{
 				auto feedback = readFeedback();
 				if (!feedback.empty())
@@ -91,17 +86,20 @@ bool DriverSocketJson::request(const std::vector<std::string>& Params)
 
 					const Json::Value errorCode = root["errorCode"];
 
-					res &= (errorCode.asString() == "0");
+					if (errorCode.asString() != "0")
+					{
+						res.push_back(i);
+					}
 				}
 				else
 				{
-					res &= false;
+					res.push_back(i);
 				}
 			}
 			else
 			{
-				res &= false;
-				ROS_ERROR_STREAM("failed to send command " << it);
+				res.push_back(i);
+				ROS_ERROR_STREAM("failed to send command " << Params[i]);
 			}
 		}
 	}
@@ -132,7 +130,7 @@ std::string DriverSocketJson::readFeedback()
 {
 	if (connector_->is_open())
 	{
-		uint8_t read[256] = { 0 };
+		uint8_t read[384] = { 0 };
 		auto rc = connector_->read(read, sizeof(read));
 		if (rc.value() > 0)
 		{
@@ -153,11 +151,32 @@ std::string DriverSocketJson::readFeedback()
 					JSONCPP_STRING err;
 					reader->parse(feedback.c_str(), feedback.c_str() + rawJsonLength, &root, &err);
 
-					const Json::Value joint_pos = root[key];
+					const Json::Value data = root[key];
 					std::vector<double> values;
-					for (const auto& it : joint_pos)
+					if (data.isArray())
 					{
-						values.push_back(it.asDouble());
+						for (const auto& it : data)
+						{
+							if (it.isDouble())
+							{
+								values.push_back(it.asDouble());
+							}
+							else if (it.isString())
+							{
+								values.push_back(std::stod(it.asString()));
+							}
+						}
+					}
+					else
+					{
+						if (data.isDouble())
+						{
+							values.push_back(data.asDouble());
+						}
+						else if (data.isString())
+						{
+							values.push_back(std::stod(data.asString()));
+						}
 					}
 					response_[key] = values;
 #ifdef DEBUG

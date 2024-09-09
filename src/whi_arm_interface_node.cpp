@@ -35,7 +35,7 @@ void signalHandler(int Signal)
 int main(int argc, char** argv)
 {
 	/// node version and copyright announcement
-	std::cout << "\nWHI arm interface VERSION 03.01.5" << std::endl;
+	std::cout << "\nWHI arm interface VERSION 03.01.6" << std::endl;
 	std::cout << "Copyright © 2022-2025 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
 	/// ros infrastructure
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 	signal(SIGINT, signalHandler);
 	functionWrapper = [&](int)
 	{
-		armHardware = nullptr;
+		armHardware->quit();
 
 		// all the default sigint handler does is call shutdown()
 		ros::shutdown();

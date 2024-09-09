@@ -36,6 +36,11 @@ namespace whi_arm_hardware_interface
 		}
     }
 
+    void ChinHardwareInterface::quit()
+    {
+        
+    }
+
     void ChinHardwareInterface::init()
     {
         ros::NodeHandle nh_private("~");
