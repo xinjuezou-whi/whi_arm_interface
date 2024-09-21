@@ -219,8 +219,7 @@ namespace whi_arm_hardware_interface
             {
                 for (const auto& it : srv.response.controller)
                 {
-                    if (it.type.find("joint_state_controller") == std::string::npos &&
-                        it.state == "running")
+                    if (it.state == "running" && !it.claimed_resources.front().resources.empty())
                     {
                         controllerName.assign(it.name);
                     }
