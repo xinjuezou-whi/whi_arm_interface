@@ -51,14 +51,16 @@ namespace whi_arm_hardware_interface
         bool jaka_tcp_read();
         bool jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration);
         bool jaka_tcp_setIo(int Addr, int Level);
-        bool jake_tcp_isProtective();
+        bool jaka_tcp_isProtective();
+        bool jaka_tcp_protectiveRecover();
         // jakaAPI related
         bool jaka_api_init(const std::string& Addr);
         void jaka_api_close();
         bool jaka_api_read();
         bool jaka_api_servoPositions(const std::vector<double>& Positions, double Duration);
         bool jaka_api_setIo(int Addr, int Level);
-        bool jake_api_isProtective();
+        bool jaka_api_isProtective();
+        bool jaka_api_protectiveRecover();
         bool onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response);
         bool onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
             whi_interfaces::WhiSrvIo::Response& Response);
@@ -74,6 +76,7 @@ namespace whi_arm_hardware_interface
         double payload_weight_{ 0.0 };
         std::vector<double> payload_to_tcp_;
         bool standby_{ false };
+        bool is_protective_{ false };
         int tcp_resend_max_{ 0 };
     };
 }

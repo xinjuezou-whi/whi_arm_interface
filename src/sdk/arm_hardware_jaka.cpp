@@ -19,6 +19,8 @@ All text above must be included in any redistribution.
 #include "whi_interfaces/WhiMotionState.h"
 #include <json/json.h>
 #include <angles/angles.h>
+#include <trajectory_msgs/JointTrajectory.h>
+#include <controller_manager_msgs/ListControllers.h>
 
 #include <thread>
 
@@ -108,7 +110,7 @@ namespace whi_arm_hardware_interface
             server_ready_ = std::make_unique<ros::ServiceServer>(
                 node_handle_->advertiseService("arm_ready", &JakaHardwareInterface::onServiceReady, this));            
             // advertise io service
-            service_io_ = std::make_unique<ros::ServiceServer>(
+            server_io_ = std::make_unique<ros::ServiceServer>(
                 node_handle_->advertiseService("arm_io", &JakaHardwareInterface::onServiceIo, this));
             // create state publisher
             pub_motion_state_ = std::make_unique<ros::Publisher>(
@@ -164,6 +166,8 @@ namespace whi_arm_hardware_interface
 
         // controller
         controller_manager_ = std::make_unique<controller_manager::ControllerManager>(this, *node_handle_);
+        client_controller_manager_ = std::make_unique<ros::ServiceClient>(
+            node_handle_->serviceClient<controller_manager_msgs::ListControllers>("controller_manager/list_controllers"));
 
         node_handle_->param("loop_hz", loop_hz_, 10.0);
         ros::Duration updateFreq = ros::Duration(1.0 / loop_hz_);
@@ -176,24 +180,27 @@ namespace whi_arm_hardware_interface
         elapsed_time_ = ros::Duration(Event.current_real - Event.last_real);
         read();
         controller_manager_->update(ros::Time::now(), elapsed_time_);
-        write(elapsed_time_);
+        if (!is_protective_)
+        {
+            write(elapsed_time_);
+        }
     }
 
     void JakaHardwareInterface::read()
     {
         static bool init = true;
 
-        bool res = true, isProtective = false;
+        bool res = true;
         if (jaka_api_instance_)
         {
             res = jaka_api_read();
             // only get_robot_status is multi-thread safe, therefore taking synchronous mech
-            isProtective = jake_api_isProtective();
+            is_protective_ = jaka_api_isProtective();
         }
         else
         {
             res = jaka_tcp_read();
-            isProtective = jake_tcp_isProtective();
+            is_protective_ = jaka_tcp_isProtective();
         }
 
         if (init && res)
@@ -203,18 +210,52 @@ namespace whi_arm_hardware_interface
             standby_ = true;
         }
 
-        whi_interfaces::WhiMotionState msg;
-        if (isProtective)
+        if (is_protective_)
         {
+            // get the controller name through service
+            std::string controllerName("controllers/scaled_pos_controller");
+            controller_manager_msgs::ListControllers srv;
+            if (client_controller_manager_->call(srv))
+            {
+                for (const auto& it : srv.response.controller)
+                {
+                    if (it.type.find("joint_state_controller") == std::string::npos)
+                    {
+                        controllerName.assign(it.name);
+                    }
+                }
+            }
+            // abort the goal with preemption policy
+            auto pub_preempt = std::make_unique<ros::Publisher>(
+                node_handle_->advertise<trajectory_msgs::JointTrajectory>(controllerName + "/command", 1));
+            trajectory_msgs::JointTrajectory preempt;
+            pub_preempt->publish(preempt);
+
+            whi_interfaces::WhiMotionState msg;
             msg.state = whi_interfaces::WhiMotionState::STA_FAULT;
+            if (pub_motion_state_)
+            {
+                pub_motion_state_->publish(msg);
+            }
+            ROS_ERROR_STREAM("arm entered protective state");
+
+            if (jaka_api_instance_)
+            {
+                jaka_api_protectiveRecover();
+            }
+            else
+            {
+                jaka_tcp_protectiveRecover();
+            }
         }
         else
         {
+            whi_interfaces::WhiMotionState msg;
             msg.state = whi_interfaces::WhiMotionState::STA_STANDBY;
-        }
-        if (pub_motion_state_)
-        {
-            pub_motion_state_->publish(msg);
+            if (pub_motion_state_)
+            {
+                pub_motion_state_->publish(msg);
+            }
         }
     }
 
@@ -347,14 +388,14 @@ namespace whi_arm_hardware_interface
                 joint_position_[i] = angles::from_degrees(read[i]);
             }
 
-    #ifdef DEBUG
+#ifdef DEBUG
             std::cout << "read positions:";
             for (const auto& it : joint_position_)
             {
                 std::cout << it << ",";
             }
             std::cout << std::endl;
-    #endif
+#endif
 
             return true;
         }
@@ -424,7 +465,7 @@ namespace whi_arm_hardware_interface
         return res.empty();
     }
 
-    bool JakaHardwareInterface::jake_tcp_isProtective()
+    bool JakaHardwareInterface::jaka_tcp_isProtective()
     {
         Json::Value root;
         Json::Value data;
@@ -436,16 +477,47 @@ namespace whi_arm_hardware_interface
         root["cmdName"] = "protective_stop_status";
         requests.push_back(Json::writeString(builder, root));
 
-        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
-        auto read = ((DriverSocketJson*)drivers_map_[name_].get())->readParam(paramKey[PROTECTIVE_STOP]);
-        if (read.empty())
+        if (((DriverSocketJson*)drivers_map_[name_].get())->request(requests).empty())
         {
-            return false;
+            auto read = ((DriverSocketJson*)drivers_map_[name_].get())->readParam(paramKey[PROTECTIVE_STOP]);
+            if (read.empty())
+            {
+                return false;
+            }
+            else
+            {
+                return read.front() > 0.0;
+            }
         }
         else
         {
-            return read.front() > 0.0;
+            ROS_WARN_STREAM("failed to requiry protective state");
+            return false;
         }
+    }
+
+    bool JakaHardwareInterface::jaka_tcp_protectiveRecover()
+    {
+        Json::Value root;
+        Json::Value data;
+        Json::StreamWriterBuilder builder;
+        builder["indentation"] = "";
+
+        std::vector<std::string> requests;
+        // {"cmdName":"clear_error"}
+        root["cmdName"] = "clear_error";
+        requests.push_back(Json::writeString(builder, root));
+        // {"cmdName":"servo_move","relFlag":1}
+        root["cmdName"] = "servo_move";
+        root["relFlag"] = 1;
+        requests.push_back(Json::writeString(builder, root));
+
+        auto res = ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        if (!res.empty())
+        {
+            ROS_WARN_STREAM("failed to recover from protective state");
+        }
+        return res.empty();
     }
 
     bool JakaHardwareInterface::jaka_api_init(const std::string& Addr)
@@ -548,12 +620,18 @@ namespace whi_arm_hardware_interface
         return jaka_api_instance_->set_digital_output(IO_CABINET, Addr - 1, Level) == ERR_SUCC;
     }
 
-    bool JakaHardwareInterface::jake_api_isProtective()
+    bool JakaHardwareInterface::jaka_api_isProtective()
     {
         BOOL res = FALSE;
         jaka_api_instance_->is_in_collision(&res);
 
         return res;
+    }
+
+    bool JakaHardwareInterface::jaka_api_protectiveRecover()
+    {
+        return jaka_api_instance_->collision_recover() == ERR_SUCC &&
+            jaka_api_instance_->servo_move_enable(true) == ERR_SUCC;
     }
 
     bool JakaHardwareInterface::onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response)
