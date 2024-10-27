@@ -47,6 +47,10 @@ void DriverRosserial::actuate(std::string Command)
 	}
 }
 
+void DriverRosserial::close()
+{
+}
+
 void DriverRosserial::cal_angularVel2PwmDuty()
 {
 	// leave for override

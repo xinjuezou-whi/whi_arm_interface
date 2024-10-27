@@ -31,6 +31,7 @@ public:
 	virtual double readAngle() = 0;
 	virtual void actuate(double Command) = 0;
 	virtual void actuate(std::string Command) = 0;
+	virtual void close() = 0;
 	virtual std::shared_ptr<RotaryEncoderBase> getEncoder() = 0;
 	virtual void cal_angularVel2PwmDuty() = 0;
 

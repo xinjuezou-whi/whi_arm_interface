@@ -26,6 +26,9 @@ Changelog:
 class DriverSocketJson : public DriverBase
 {
 public:
+	enum ParamType { STR = 0, NUM };
+
+public:
 	DriverSocketJson() = delete;
 	DriverSocketJson(const std::string& JointName, const std::string& Addr, int Port);
 	~DriverSocketJson() override;
@@ -35,6 +38,7 @@ public:
 	double readAngle() override;
 	void actuate(double Command) override;
 	void actuate(std::string Command) override;
+	void close() override;
 	std::shared_ptr<RotaryEncoderBase> getEncoder() override { return encoder_; };
 	void cal_angularVel2PwmDuty() override;
 
@@ -42,6 +46,7 @@ public:
 	// specific
 	std::vector<int> request(const std::vector<std::string>& Params);
 	std::vector<double> readParam(const std::string& Param);
+	std::vector<std::string> readParamStr(const std::string& Param);
 	bool sendCommand(const std::string& Command);
 	std::string readFeedback();
 	std::vector<uint8_t> codingCommand(const std::string& Command) const;
@@ -50,6 +55,7 @@ public:
 protected:
 	std::unique_ptr<sockpp::tcp_connector> connector_{ nullptr };
 	std::map<std::string, std::vector<double>> response_;
+	std::map<std::string, std::vector<std::string>> response_str_;
 	std::shared_ptr<RotaryEncoderBase> encoder_{ nullptr };
 	std::string addr_;
 	int port_{ 8888 };

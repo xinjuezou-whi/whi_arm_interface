@@ -66,6 +66,11 @@ void DriverSocket::actuate(std::string Command)
 #endif
 }
 
+void DriverSocket::close()
+{
+	connector_->close();
+}
+
 void DriverSocket::cal_angularVel2PwmDuty()
 {
 	// leave for override
@@ -186,7 +191,7 @@ bool DriverSocket::sendCommand(const std::string& Command)
 	}
 	else
 	{
-		ROS_FATAL_STREAM_NAMED("failed to open socket %s", (addr_ + ":" + std::to_string(port_)).c_str());
+		ROS_FATAL_STREAM("failed to open socket " << addr_ << ":" << port_);
 		return false;
 	}
 }
@@ -204,7 +209,7 @@ std::vector<std::string> DriverSocket::readFeedback()
 	}
 	else
 	{
-		ROS_FATAL_STREAM_NAMED("failed to open socket %s", (addr_ + ":" + std::to_string(port_)).c_str());
+		ROS_FATAL_STREAM("failed to open socket " << addr_ << ":" << port_);
 	}
 
 	return std::vector<std::string>();

@@ -40,5 +40,5 @@
   <!-- Start controllers -->
   <node ns="whi_arm_interface" name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen"
         args="controllers/state
-	            controllers/scaled_pos_controller"/>
+	            controllers/scaled_pos_controller --timeout 600"/>
 </launch>

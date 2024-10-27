@@ -30,8 +30,8 @@ namespace whi_arm_hardware_interface
     class JakaHardwareInterface : public ArmHardware
     {
     protected:
-        enum ParamKey { JOINT_POS = 0, PROTECTIVE_STOP, PARAM_KEY_SUM };
-        static constexpr const char* paramKey[PARAM_KEY_SUM] = { "joint_pos", "protective_stop" };
+        enum ParamKey { JOINT_POS = 0, PROTECTIVE_STOP, ENABLE, POWER, IN_SERVO, PARAM_KEY_SUM };
+        static constexpr const char* paramKey[PARAM_KEY_SUM] = { "joint_pos", "protective_stop", "enable", "power", "in_servomove" };
 
     public:
         JakaHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle);
@@ -45,9 +45,11 @@ namespace whi_arm_hardware_interface
         void update(const ros::TimerEvent& Event);
         void read();
         void write(ros::Duration ElapsedTime);
+        void initializing();
         // jaka TCP protocol related
         bool jaka_tcp_init();
-        void jaka_tcp_close();
+        bool jaka_tcp_close();
+        bool jaka_tcp_state();
         bool jaka_tcp_read();
         bool jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration);
         bool jaka_tcp_setIo(int Addr, int Level);
@@ -61,6 +63,7 @@ namespace whi_arm_hardware_interface
         bool jaka_api_setIo(int Addr, int Level);
         bool jaka_api_isProtective();
         bool jaka_api_protectiveRecover();
+        void makeOffers();
         bool onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response);
         bool onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
             whi_interfaces::WhiSrvIo::Response& Response);
@@ -71,12 +74,12 @@ namespace whi_arm_hardware_interface
     protected:
         std::string name_{ "socket" };
         std::string controller_type_{ "position" };
+        std::string addr_{ "10.5.5.1" };
         std::unique_ptr<JAKAZuRobot> jaka_api_instance_{ nullptr };
         double velocity_scale_{ 1.0 };
         double payload_weight_{ 0.0 };
         std::vector<double> payload_to_tcp_;
         bool standby_{ false };
         bool is_protective_{ false };
-        int tcp_resend_max_{ 0 };
     };
 }

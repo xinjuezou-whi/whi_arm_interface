@@ -27,7 +27,7 @@ DriverSerial::DriverSerial(const std::string& JointName, const char* Device, uns
 	}
 	catch (serial::IOException& e)
 	{
-		ROS_FATAL_STREAM_NAMED("failed to open serial %s", serial_port_.c_str());
+		ROS_FATAL_STREAM("failed to open serial " << serial_port_);
 	}
 }
 
@@ -37,13 +37,7 @@ DriverSerial::DriverSerial(const std::string& JointName, std::shared_ptr<serial:
 
 DriverSerial::~DriverSerial()
 {
-	terminated_.store(true);
-	th_read_.join();
-
-	if (serial_inst_)
-	{
-		serial_inst_->close();
-	}
+	close();
 }
 
 double DriverSerial::readAngle()
@@ -61,6 +55,17 @@ void DriverSerial::actuate(std::string Command)
 	if (serial_inst_)
 	{
 		serial_inst_->write(Command);
+	}
+}
+
+void DriverSerial::close()
+{
+	terminated_.store(true);
+	th_read_.join();
+
+	if (serial_inst_)
+	{
+		serial_inst_->close();
 	}
 }
 

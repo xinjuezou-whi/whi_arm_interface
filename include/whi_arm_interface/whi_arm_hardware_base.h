@@ -98,5 +98,7 @@ namespace whi_arm_hardware_interface
         std::unique_ptr<ros::ServiceServer> server_ready_{ nullptr };
 		std::unique_ptr<ros::ServiceClient> client_controller_manager_{ nullptr };
         std::unique_ptr<ros::Publisher> pub_motion_state_{ nullptr };
+		int startup_duration_{ 10 };
+		bool initialized_{ false };
 	};
 }

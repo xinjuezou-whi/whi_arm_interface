@@ -31,7 +31,7 @@ DriverSocketJson::DriverSocketJson(const std::string& JointName, const std::stri
 
 DriverSocketJson::~DriverSocketJson()
 {
-	connector_->close();
+	close();
 }
 
 double DriverSocketJson::readAngle()
@@ -50,6 +50,11 @@ void DriverSocketJson::actuate(std::string Command)
 #ifdef DEBUG
 	std::cout << Command << std::endl;
 #endif
+}
+
+void DriverSocketJson::close()
+{
+	connector_->close();
 }
 
 void DriverSocketJson::cal_angularVel2PwmDuty()
@@ -74,24 +79,20 @@ std::vector<int> DriverSocketJson::request(const std::vector<std::string>& Param
 		{
 			if (sendCommand(Params[i]))
 			{
-				auto feedback = readFeedback();
-				if (!feedback.empty())
+				std::string feedback;
+				while (feedback.empty())
 				{
-					const auto rawJsonLength = static_cast<int>(feedback.length());
-					Json::CharReaderBuilder builder;
-					const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
-					Json::Value root;
-					JSONCPP_STRING err;
-					reader->parse(feedback.c_str(), feedback.c_str() + rawJsonLength, &root, &err);
-
-					const Json::Value errorCode = root["errorCode"];
-
-					if (errorCode.asString() != "0")
-					{
-						res.push_back(i);
-					}
+					feedback = readFeedback();
 				}
-				else
+				const auto rawJsonLength = static_cast<int>(feedback.length());
+				Json::CharReaderBuilder builder;
+				const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
+				Json::Value root;
+				JSONCPP_STRING err;
+				reader->parse(feedback.c_str(), feedback.c_str() + rawJsonLength, &root, &err);
+
+				const Json::Value errorCode = root["errorCode"];
+				if (errorCode.asString() != "0")
 				{
 					res.push_back(i);
 				}
@@ -112,6 +113,11 @@ std::vector<double> DriverSocketJson::readParam(const std::string& Param)
 	return response_[Param];
 }
 
+std::vector<std::string> DriverSocketJson::readParamStr(const std::string& Param)
+{
+	return response_str_[Param];
+}
+
 bool DriverSocketJson::sendCommand(const std::string& Command)
 {
 	if (connector_->is_open())
@@ -121,7 +127,7 @@ bool DriverSocketJson::sendCommand(const std::string& Command)
 	}
 	else
 	{
-		ROS_FATAL_STREAM_NAMED("failed to open socket %s", (addr_ + ":" + std::to_string(port_)).c_str());
+		ROS_FATAL_STREAM("failed to open socket " << addr_  << ":" << port_);
 		return false;
 	}
 }
@@ -153,35 +159,55 @@ std::string DriverSocketJson::readFeedback()
 
 					const Json::Value data = root[key];
 					std::vector<double> values;
+					std::vector<std::string> valuesStr;
 					if (data.isArray())
 					{
 						for (const auto& it : data)
 						{
-							if (it.isDouble())
+							if (it.isNumeric())
 							{
 								values.push_back(it.asDouble());
 							}
 							else if (it.isString())
 							{
-								values.push_back(std::stod(it.asString()));
+								valuesStr.push_back(it.asString());
+							}
+							else if (it.isBool())
+							{
+								valuesStr.push_back(it.asBool() ? "1" : "0");
 							}
 						}
 					}
 					else
 					{
-						if (data.isDouble())
+						if (data.isNumeric())
 						{
 							values.push_back(data.asDouble());
 						}
 						else if (data.isString())
 						{
-							values.push_back(std::stod(data.asString()));
+							valuesStr.push_back(data.asString());
+						}
+						else if (data.isBool())
+						{
+							valuesStr.push_back(data.asBool() ? "1" : "0");
 						}
 					}
-					response_[key] = values;
+					if (!values.empty())
+					{
+						response_[key] = values;
+					}
+					else if (!valuesStr.empty())
+					{
+						response_str_[key] = valuesStr;
+					}
 #ifdef DEBUG
 					std::cout << "read param with key " << key << ":";
 					for (const auto& it : response_[key])
+					{
+						std::cout << it << ",";
+					}
+					for (const auto& it : response_str_[key])
 					{
 						std::cout << it << ",";
 					}
@@ -195,7 +221,7 @@ std::string DriverSocketJson::readFeedback()
 	}
 	else
 	{
-		ROS_FATAL_STREAM_NAMED("failed to open socket %s", (addr_ + ":" + std::to_string(port_)).c_str());
+		ROS_FATAL_STREAM("failed to open socket " << addr_  << ":" << port_);
 	}
 
 	return std::string();

@@ -39,6 +39,7 @@ public:
 	double readAngle() override;
 	void actuate(double Command) override;
 	void actuate(std::string Command) override;
+	void close() override;
 	std::shared_ptr<RotaryEncoderBase> getEncoder() override { return encoder_; };
 	void cal_angularVel2PwmDuty() override;
 
