@@ -20,12 +20,12 @@ whi_arm_interface:
         # set it big enough especially for position controller
         goal_time: 1.0 # 0.5 sec
         stopped_velocity_tolerance: 0.05 # 0.01 rad/s
-        joint_1: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_2: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_3: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_4: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_5: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_6: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
+        joint_1: { trajectory: 0.2, goal: 0.1 }
+        joint_2: { trajectory: 0.2, goal: 0.1 }
+        joint_3: { trajectory: 0.2, goal: 0.1 }
+        joint_4: { trajectory: 0.2, goal: 0.1 }
+        joint_5: { trajectory: 0.2, goal: 0.1 }
+        joint_6: { trajectory: 0.2, goal: 0.1 }
       # when starting the controller or canceling a trajectory, position hold mode is entered
       # this parameter specifies the time it takes to bring the current state (position and velocity) to a stop
       # if zero, the controller stops at the actual position
@@ -40,12 +40,12 @@ whi_arm_interface:
         # set it big enough especially for position controller
         goal_time: 1.0 # 0.5 sec
         stopped_velocity_tolerance: 0.05 # 0.01 rad/s
-        joint_1: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_2: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_3: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_4: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_5: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_6: { trajectory: 0.35, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
+        joint_1: { trajectory: 0.2, goal: 0.1 }
+        joint_2: { trajectory: 0.2, goal: 0.1 }
+        joint_3: { trajectory: 0.2, goal: 0.1 }
+        joint_4: { trajectory: 0.2, goal: 0.1 }
+        joint_5: { trajectory: 0.2, goal: 0.1 }
+        joint_6: { trajectory: 0.2, goal: 0.1 }
       gains: # Required if controlling a velocity interface
         joint_1: {p: 100,  d: 1, i: 1, i_clamp: 1}
         joint_2: {p: 100,  d: 1, i: 1, i_clamp: 1}
@@ -67,12 +67,12 @@ whi_arm_interface:
         # set it big enough especially for position controller
         goal_time: 1.0 # 0.5 sec
         stopped_velocity_tolerance: 0.05 # 0.01 rad/s
-        joint_1: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_2: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_3: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_4: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_5: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_6: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
+        joint_1: { trajectory: 0.2, goal: 0.1 }
+        joint_2: { trajectory: 0.2, goal: 0.1 }
+        joint_3: { trajectory: 0.2, goal: 0.1 }
+        joint_4: { trajectory: 0.2, goal: 0.1 }
+        joint_5: { trajectory: 0.2, goal: 0.1 }
+        joint_6: { trajectory: 0.2, goal: 0.1 }
       gains: # Required if controlling a velocity interface
         joint_1: {p: 100,  d: 1, i: 1, i_clamp: 1}
         joint_2: {p: 100,  d: 1, i: 1, i_clamp: 1}
@@ -94,12 +94,12 @@ whi_arm_interface:
         # set it big enough especially for position controller
         goal_time: 1.0 # 0.5 sec
         stopped_velocity_tolerance: 0.05 # 0.01 rad/s
-        joint_1: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_2: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_3: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_4: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_5: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_6: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
+        joint_1: { trajectory: 0.2, goal: 0.1 }
+        joint_2: { trajectory: 0.2, goal: 0.1 }
+        joint_3: { trajectory: 0.2, goal: 0.1 }
+        joint_4: { trajectory: 0.2, goal: 0.1 }
+        joint_5: { trajectory: 0.2, goal: 0.1 }
+        joint_6: { trajectory: 0.2, goal: 0.1 }
       gains: # Required if controlling a velocity interface
         joint_1: {p: 100,  d: 1, i: 1, i_clamp: 1}
         joint_2: {p: 100,  d: 1, i: 1, i_clamp: 1}
@@ -121,12 +121,12 @@ whi_arm_interface:
         # set it big enough especially for position controller
         goal_time: 1.0 # 0.5 sec
         stopped_velocity_tolerance: 0.05 # 0.01 rad/s
-        joint_1: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_2: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_3: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_4: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_5: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_6: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
+        joint_1: { trajectory: 0.2, goal: 0.1 }
+        joint_2: { trajectory: 0.2, goal: 0.1 }
+        joint_3: { trajectory: 0.2, goal: 0.1 }
+        joint_4: { trajectory: 0.2, goal: 0.1 }
+        joint_5: { trajectory: 0.2, goal: 0.1 }
+        joint_6: { trajectory: 0.2, goal: 0.1 }
       gains: # Required if controlling a velocity interface
         joint_1: {p: 100,  d: 1, i: 1, i_clamp: 1}
         joint_2: {p: 100,  d: 1, i: 1, i_clamp: 1}
@@ -148,12 +148,12 @@ whi_arm_interface:
         # set it big enough especially for position controller
         goal_time: 1.0 # 0.5 sec
         stopped_velocity_tolerance: 0.05 # 0.01 rad/s
-        joint_1: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_2: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_3: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_4: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_5: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
-        joint_6: { trajectory: 0.5, goal: 0.1 } #{ trajectory: 0.2, goal: 0.1 }
+        joint_1: { trajectory: 0.2, goal: 0.1 }
+        joint_2: { trajectory: 0.2, goal: 0.1 }
+        joint_3: { trajectory: 0.2, goal: 0.1 }
+        joint_4: { trajectory: 0.2, goal: 0.1 }
+        joint_5: { trajectory: 0.2, goal: 0.1 }
+        joint_6: { trajectory: 0.2, goal: 0.1 }
       gains: # Required if controlling a velocity interface
         joint_1: {p: 100,  d: 1, i: 1, i_clamp: 1}
         joint_2: {p: 100,  d: 1, i: 1, i_clamp: 1}
