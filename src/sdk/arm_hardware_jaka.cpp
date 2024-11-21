@@ -274,6 +274,10 @@ namespace whi_arm_hardware_interface
             else if (name_ == hardware[SOCKET])
             {
                 drivers_map_[name_] = std::make_unique<DriverSocketJson>(name_, addr_, 10001);
+                bool printTcpFeedback;
+                node_handle_->param("debug/print_tcp_feedback", printTcpFeedback, false);
+                drivers_map_[name_]->set_debug_params(std::map<std::string, bool>
+                    {{ "print_tcp_feedback", printTcpFeedback }});
                 ((DriverSocketJson*)drivers_map_[name_].get())->setParamsKey(paramKey, PARAM_KEY_SUM);
                 res = jaka_tcp_state();
                 if (!res)
@@ -328,18 +332,15 @@ namespace whi_arm_hardware_interface
         // delay 500ms
         requests.push_back("delay:500");
         // {"cmdName":"set_servo_move_filter","filter_type":1",lpf_cf":0.5}
-        root.clear();
         root["cmdName"] = "set_servo_move_filter";
         root["filter_type"] = 1;
         root["lpf_cf"] = 0.5;
         requests.push_back(Json::writeString(builder, root));
         // {"cmdName":"rapid_rate","rate_value":1.0}
-        root.clear();
         root["cmdName"] = "rapid_rate";
         root["rate_value"] = velocity_scale_;
         requests.push_back(Json::writeString(builder, root));
         // {"cmdName":"set_tool_payload","mass":weight,"centroid":[x,y,z]}
-        root.clear();
         root["cmdName"] = "set_tool_payload";
         root["mass"] = payload_weight_;
         for (const auto& it : payload_to_tcp_)
@@ -348,13 +349,11 @@ namespace whi_arm_hardware_interface
         }
         requests.push_back(Json::writeString(builder, root));
         // {"cmdName":"power_on"}
-        root.clear();
         root["cmdName"] = "power_on";
         requests.push_back(Json::writeString(builder, root));
         // delay 500ms
         requests.push_back("delay:500");
         // {"cmdName":"enable_robot"}
-        root.clear();
         root["cmdName"] = "enable_robot";
         requests.push_back(Json::writeString(builder, root));
         // delay 500ms

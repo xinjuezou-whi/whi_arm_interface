@@ -9,3 +9,5 @@ whi_arm_interface:
     addr: 10.5.5.100
   jaka_api:
     addr: 10.5.5.100
+  debug:
+    print_tcp_feedback: false

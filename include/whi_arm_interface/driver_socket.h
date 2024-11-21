@@ -39,6 +39,7 @@ public:
 	void close() override;
 	std::shared_ptr<RotaryEncoderBase> getEncoder() override { return encoder_; };
 	void cal_angularVel2PwmDuty() override;
+	void set_debug_params(const std::map<std::string, bool>& DebugParams) override;
 
 public:
 	// specific

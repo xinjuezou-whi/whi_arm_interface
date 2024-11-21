@@ -41,6 +41,7 @@ public:
 	void close() override;
 	std::shared_ptr<RotaryEncoderBase> getEncoder() override { return encoder_; };
 	void cal_angularVel2PwmDuty() override;
+	void set_debug_params(const std::map<std::string, bool>& DebugParams) override;
 
 public:
 	// specific
@@ -60,4 +61,6 @@ protected:
 	std::string addr_;
 	int port_{ 8888 };
 	std::vector<std::string> params_key_;
+	// debug params
+	bool print_tcp_feedback_{ false };
 };

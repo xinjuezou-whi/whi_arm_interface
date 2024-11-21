@@ -62,6 +62,15 @@ void DriverSocketJson::cal_angularVel2PwmDuty()
 	// leave for override
 }
 
+void DriverSocketJson::set_debug_params(const std::map<std::string, bool>& DebugParams)
+{
+	// leave for override
+	if (auto search = DebugParams.find("print_tcp_feedback"); search != DebugParams.end())
+    {
+		print_tcp_feedback_ = search->second;
+	}
+}
+
 std::vector<int> DriverSocketJson::request(const std::vector<std::string>& Params)
 {
 	const std::string key("delay:");
@@ -142,9 +151,10 @@ std::string DriverSocketJson::readFeedback()
 		{
 			std::string feedback;
 			feedback.assign((char*)read);
-#ifdef DEBUG
-			std::cout << "read feedback " << feedback << std::endl;
-#endif
+			if (print_tcp_feedback_)
+			{
+				std::cout << "DriverSocketJson::readFeedback: " << feedback << std::endl;
+			}
 
 			for (const auto& key : params_key_)
 			{

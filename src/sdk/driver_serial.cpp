@@ -74,6 +74,11 @@ void DriverSerial::cal_angularVel2PwmDuty()
 	// leave for override
 }
 
+void DriverSerial::set_debug_params(const std::map<std::string, bool>& DebugParams)
+{
+	// leave for override
+}
+
 void DriverSerial::setMotor(const std::vector<int>& LimitsDir)
 {
 	if (serial_inst_)

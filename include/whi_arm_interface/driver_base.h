@@ -34,6 +34,7 @@ public:
 	virtual void close() = 0;
 	virtual std::shared_ptr<RotaryEncoderBase> getEncoder() = 0;
 	virtual void cal_angularVel2PwmDuty() = 0;
+	virtual void set_debug_params(const std::map<std::string, bool>& DebugParams) = 0;
 
 protected:
 	std::string joint_name_;

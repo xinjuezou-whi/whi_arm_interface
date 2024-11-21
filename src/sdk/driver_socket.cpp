@@ -76,6 +76,11 @@ void DriverSocket::cal_angularVel2PwmDuty()
 	// leave for override
 }
 
+void DriverSocket::set_debug_params(const std::map<std::string, bool>& DebugParams)
+{
+	// leave for override
+}
+
 uint64_t currentTick()
 {
 	return (uint64_t)std::chrono::duration_cast<std::chrono::milliseconds>(

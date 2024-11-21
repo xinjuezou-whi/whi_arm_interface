@@ -56,6 +56,11 @@ void DriverRosserial::cal_angularVel2PwmDuty()
 	// leave for override
 }
 
+void DriverRosserial::set_debug_params(const std::map<std::string, bool>& DebugParams)
+{
+	// leave for override
+}
+
 void DriverRosserial::setMotor(const std::vector<int>& LimitsDir)
 {
 	if (pub_)
