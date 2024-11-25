@@ -5,6 +5,7 @@ whi_arm_interface:
   payload_to_tcp: [0, -0.17, 0.08]
   hardware: socket #jaka_api
   startup_duration: 10 #s
+  lpf: 5
   socket:
     addr: 10.5.5.100
   jaka_api:

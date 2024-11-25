@@ -93,6 +93,7 @@ namespace whi_arm_hardware_interface
         }
         node_handle_->param("socket/addr", addr_, std::string("10.5.5.1"));
         node_handle_->param("hardware", name_, std::string(hardware[SOCKET]));
+        node_handle_->param("loop_hz", loop_hz_, 10.0);
         initializing();
 
         // resize vectors
@@ -147,7 +148,6 @@ namespace whi_arm_hardware_interface
         client_controller_manager_ = std::make_unique<ros::ServiceClient>(
             node_handle_->serviceClient<controller_manager_msgs::ListControllers>("controller_manager/list_controllers"));
 
-        node_handle_->param("loop_hz", loop_hz_, 10.0);
         ros::Duration updateFreq = ros::Duration(1.0 / loop_hz_);
         non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(
             updateFreq, std::bind(&JakaHardwareInterface::update, this, std::placeholders::_1)));
@@ -262,6 +262,8 @@ namespace whi_arm_hardware_interface
             ROS_WARN_STREAM("failed to ping:" << addr_ << ", attempt to another try in " << startup_duration_ << " seconds");
             std::this_thread::sleep_for(std::chrono::seconds(startup_duration_));
         }
+
+        node_handle_->param("lpf", lpf_, 0.5);
         
         bool res = false;
         while (!res)
@@ -331,10 +333,10 @@ namespace whi_arm_hardware_interface
         requests.push_back(Json::writeString(builder, root));
         // delay 500ms
         requests.push_back("delay:500");
-        // {"cmdName":"set_servo_move_filter","filter_type":1",lpf_cf":0.5}
+        // {"cmdName":"set_servo_move_filter","filter_type":1,"lpf_cf":0.5}
         root["cmdName"] = "set_servo_move_filter";
         root["filter_type"] = 1;
-        root["lpf_cf"] = 0.5;
+        root["lpf_cf"] = lpf_;
         requests.push_back(Json::writeString(builder, root));
         // {"cmdName":"rapid_rate","rate_value":1.0}
         root["cmdName"] = "rapid_rate";
@@ -559,33 +561,84 @@ namespace whi_arm_hardware_interface
     {
         bool res = true;
         jaka_api_instance_ = std::make_unique<JAKAZuRobot>();
-        if (jaka_api_instance_->login_in(Addr.c_str()) == ERR_SUCC)
+        if (jaka_api_instance_->login_in(Addr.c_str()) != ERR_SUCC)
         {
-            jaka_api_instance_->servo_move_enable(false);
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            // set filter parameter
-            jaka_api_instance_->servo_move_use_joint_LPF(0.5);
-            jaka_api_instance_->set_rapidrate(velocity_scale_);
-            PayLoad payload;
-            payload.mass = payload_weight_;
-            payload.centroid.x = payload_to_tcp_[0];
-            payload.centroid.y = payload_to_tcp_[1];
-            payload.centroid.z = payload_to_tcp_[2];
-            jaka_api_instance_->set_payload(&payload);
-            jaka_api_instance_->power_on();
-            jaka_api_instance_->enable_robot();
-            jaka_api_instance_->servo_move_enable(true);
-
-            ROS_INFO_STREAM("JAKA driver is initialized successfully");
-        }
-        else
-        {
+            ROS_ERROR_STREAM("failed to login JAKA driver. failed to initialize JAKA driver");
             jaka_api_instance_ = nullptr;
-            res = false;
-            ROS_ERROR_STREAM("failed to initialize JAKA driver");
+            return false;
+        }
+        if (jaka_api_instance_->servo_move_enable(false) != ERR_SUCC)
+        {
+            ROS_ERROR_STREAM("failed to disable servo mode. failed to initialize JAKA driver");
+            return false;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        if (jaka_api_instance_->servo_move_use_joint_LPF(lpf_) != ERR_SUCC)
+        {
+            ROS_ERROR_STREAM("failed to set LPF to " << lpf_ << " Hz. failed to initialize JAKA driver");
+            return false;
+        }
+        if (jaka_api_instance_->set_rapidrate(velocity_scale_) != ERR_SUCC)
+        {
+            ROS_ERROR_STREAM("failed to set velocity scale to " << velocity_scale_ << ". failed to initialize JAKA driver");
+            return false;
+        }
+        PayLoad payload;
+        payload.mass = payload_weight_;
+        payload.centroid.x = payload_to_tcp_[0];
+        payload.centroid.y = payload_to_tcp_[1];
+        payload.centroid.z = payload_to_tcp_[2];
+        if (jaka_api_instance_->set_payload(&payload) != ERR_SUCC)
+        {
+            ROS_ERROR_STREAM("failed to set payload. failed to initialize JAKA driver");
+            return false;
+        }
+        if (jaka_api_instance_->power_on() != ERR_SUCC)
+        {
+            ROS_ERROR_STREAM("failed to power on arm. failed to initialize JAKA driver");
+            return false;
+        }
+        if (jaka_api_instance_->enable_robot() != ERR_SUCC)
+        {
+            ROS_ERROR_STREAM("failed to enable arm. failed to initialize JAKA driver");
+            return false;
+        }
+        if (jaka_api_instance_->servo_move_enable(true) != ERR_SUCC)
+        {
+            ROS_ERROR_STREAM("failed to enable servo mode. failed to initialize JAKA driver");
+            return false;
         }
 
-        return res;
+        ROS_INFO_STREAM("JAKA driver is initialized successfully");
+        return true;
+
+        // if (jaka_api_instance_->login_in(Addr.c_str()) == ERR_SUCC)
+        // {
+        //     jaka_api_instance_->servo_move_enable(false);
+        //     std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        //     // set filter parameter
+        //     jaka_api_instance_->servo_move_use_joint_LPF(5);
+        //     jaka_api_instance_->set_rapidrate(velocity_scale_);
+        //     PayLoad payload;
+        //     payload.mass = payload_weight_;
+        //     payload.centroid.x = payload_to_tcp_[0];
+        //     payload.centroid.y = payload_to_tcp_[1];
+        //     payload.centroid.z = payload_to_tcp_[2];
+        //     jaka_api_instance_->set_payload(&payload);
+        //     jaka_api_instance_->power_on();
+        //     jaka_api_instance_->enable_robot();
+        //     jaka_api_instance_->servo_move_enable(true);
+
+        //     ROS_INFO_STREAM("JAKA driver is initialized successfully");
+        // }
+        // else
+        // {
+        //     jaka_api_instance_ = nullptr;
+        //     res = false;
+        //     ROS_ERROR_STREAM("failed to initialize JAKA driver");
+        // }
+
+        // return res;
     }
 
     void JakaHardwareInterface::jaka_api_close()

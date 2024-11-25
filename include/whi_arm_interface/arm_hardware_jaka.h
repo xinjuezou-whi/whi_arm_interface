@@ -81,5 +81,6 @@ namespace whi_arm_hardware_interface
         std::vector<double> payload_to_tcp_;
         bool standby_{ false };
         bool is_protective_{ false };
+        double lpf_{ 0.5 };
     };
 }
