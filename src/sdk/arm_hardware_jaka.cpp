@@ -705,7 +705,7 @@ namespace whi_arm_hardware_interface
 
     bool JakaHardwareInterface::jaka_api_setIo(int Addr, int Level)
     {
-        return jaka_api_instance_->set_digital_output(IO_CABINET, Addr - 1, Level) == ERR_SUCC;
+        return jaka_api_instance_->set_digital_output(IO_CABINET, Addr, Level) == ERR_SUCC;
     }
 
     bool JakaHardwareInterface::jaka_api_isProtective()
