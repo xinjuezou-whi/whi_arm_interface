@@ -127,15 +127,14 @@ include_directories(
   /usr/include/jsoncpp/
 )
 
-## Declare a C++ library
-FILE(GLOB WHI_SDK_SRC
-  "src/sdk/*.cpp"
-)
-
 link_directories(lib
   ${catkin_LIB_DIRS}
 )
 
+## Declare a C++ library
+FILE(GLOB WHI_SDK_SRC
+  "src/sdk/*.cpp"
+)
 add_library(whi_arm_hardware ${WHI_SDK_SRC})
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/whi_arm_interface.cpp
