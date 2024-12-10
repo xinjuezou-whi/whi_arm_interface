@@ -490,7 +490,7 @@ namespace whi_arm_hardware_interface
         // {"cmdName":"set_digital_output","type":0,"index":1,"value":1}
         root["cmdName"] = "set_digital_output";
         root["type"] = 0; // 0 stands for IO on controller
-        root["index"] = Addr;
+        root["index"] = Addr - 1;
         root["value"] = Level;
         requests.push_back(Json::writeString(builder, root));
 
@@ -705,7 +705,7 @@ namespace whi_arm_hardware_interface
 
     bool JakaHardwareInterface::jaka_api_setIo(int Addr, int Level)
     {
-        return jaka_api_instance_->set_digital_output(IO_CABINET, Addr, Level) == ERR_SUCC;
+        return jaka_api_instance_->set_digital_output(IO_CABINET, Addr - 1, Level) == ERR_SUCC;
     }
 
     bool JakaHardwareInterface::jaka_api_isProtective()
