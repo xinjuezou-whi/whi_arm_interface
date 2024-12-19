@@ -32,11 +32,15 @@ namespace whi_arm_hardware_interface
 
     void ArHardwareInterface::quit()
     {
-        
+        // give time to thirdparty dependencies
+        std::this_thread::sleep_for(std::chrono::milliseconds(shutdown_patience_));
     }
 
     void ArHardwareInterface::init()
     {
+        // general params
+        node_handle_->param("shutdown_patience", shutdown_patience_, 0);
+
         // joints
         node_handle_->getParam("joints", joint_names_);
         if (joint_names_.size() == 0)

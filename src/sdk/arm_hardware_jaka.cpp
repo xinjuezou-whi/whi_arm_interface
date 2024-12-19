@@ -36,6 +36,9 @@ namespace whi_arm_hardware_interface
 
     void JakaHardwareInterface::quit()
     {
+        // give time to thirdparty dependencies
+        std::this_thread::sleep_for(std::chrono::milliseconds(shutdown_patience_));
+
         if (name_ == hardware[JAKA_API])
         {
             jaka_api_close();
@@ -61,6 +64,10 @@ namespace whi_arm_hardware_interface
 
     void JakaHardwareInterface::init()
     {
+        // general params
+        node_handle_->param("shutdown_patience", shutdown_patience_, 0);
+std::cout << "ddddddddddddddddddddddddd " << shutdown_patience_ << std::endl;
+
         // joints
         node_handle_->getParam("joints", joint_names_);
         if (joint_names_.size() == 0)

@@ -1,5 +1,6 @@
 whi_arm_interface:
   loop_hz: 50 # hz
+  shutdown_patience: 5000 #ms
   hardware: 'socket'
   forward_dirs: [-1, -1, -1, -1, -1, -1]
   speed_rate: 100

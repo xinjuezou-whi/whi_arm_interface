@@ -1,9 +1,10 @@
 whi_arm_interface:
   loop_hz: 50 # hz
+  shutdown_patience: 5000 #ms
   velocity_scale: 1.0
   payload_weight: 3.291 # unit Kg
   payload_to_tcp: [0.009257, -0.095786, 0.03977]
-  hardware: socket #jaka_api
+  hardware: jaka_api #jaka_api
   startup_duration: 10 #s
   lpf: 2.34375
   socket:

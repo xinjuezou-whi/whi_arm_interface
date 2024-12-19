@@ -1,5 +1,6 @@
 whi_arm_interface:
   loop_hz: 20 # hz
+  shutdown_patience: 5000 #ms
   steps_per_degree: [44.705882, 110.60606, 56.071429, 46.060606, 21.785714, 42.741936]
   forward_dir: [1, 1, 1, -1, 1, 1]
   limits_dir: [-1, -1, 1, 1, -1, 1]
