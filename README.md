@@ -5,7 +5,8 @@ arm hardware interface
 ## Supported arms
 | Brand   | Seriels | Test     |
 |---------|---------|----------|
-| UR      | All     | Passed   |
+| AR      | ar3     | Passed   |
+| Chin    | All     | Passed   |
 | JAKA    | All     | Passed   |
 | Fairino | All     | on going |
 
