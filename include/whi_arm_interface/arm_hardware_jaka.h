@@ -47,22 +47,22 @@ namespace whi_arm_hardware_interface
         void write(ros::Duration ElapsedTime);
         void initializing();
         // jaka TCP protocol related
-        bool jaka_tcp_init();
-        bool jaka_tcp_close();
-        bool jaka_tcp_state();
-        bool jaka_tcp_read();
-        bool jaka_tcp_servoPositions(const std::vector<double>& Positions, double Duration);
-        bool jaka_tcp_setIo(int Addr, int Level);
-        bool jaka_tcp_isProtective();
-        bool jaka_tcp_protectiveRecover();
+        bool tcp_init();
+        bool tcp_close();
+        bool tcp_state();
+        bool tcp_read();
+        bool tcp_servoPositions(const std::vector<double>& Positions, double Duration);
+        bool tcp_setIo(int Addr, int Level);
+        bool tcp_isProtective();
+        bool tcp_protectiveRecover();
         // jakaAPI related
-        bool jaka_api_init(const std::string& Addr);
-        void jaka_api_close();
-        bool jaka_api_read();
-        bool jaka_api_servoPositions(const std::vector<double>& Positions, double Duration);
-        bool jaka_api_setIo(int Addr, int Level);
-        bool jaka_api_isProtective();
-        bool jaka_api_protectiveRecover();
+        bool api_init(const std::string& Addr);
+        void api_close();
+        bool api_read();
+        bool api_servoPositions(const std::vector<double>& Positions, double Duration);
+        bool api_setIo(int Addr, int Level);
+        bool api_isProtective();
+        bool api_protectiveRecover();
         void makeOffers();
         bool onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response);
         bool onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
@@ -75,7 +75,7 @@ namespace whi_arm_hardware_interface
         std::string name_{ "socket" };
         std::string controller_type_{ "position" };
         std::string addr_{ "10.5.5.1" };
-        std::unique_ptr<JAKAZuRobot> jaka_api_instance_{ nullptr };
+        std::unique_ptr<JAKAZuRobot> api_instance_{ nullptr };
         double velocity_scale_{ 1.0 };
         double payload_weight_{ 0.0 };
         std::vector<double> payload_to_tcp_;

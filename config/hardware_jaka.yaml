@@ -4,12 +4,12 @@ whi_arm_interface:
   velocity_scale: 1.0
   payload_weight: 3.291 # unit Kg
   payload_to_tcp: [0.009257, -0.095786, 0.03977]
-  hardware: jaka_api #jaka_api
+  hardware: api #api
   startup_duration: 10 #s
   lpf: 2.34375
   socket:
     addr: 10.5.5.100
-  jaka_api:
+  api:
     addr: 10.5.5.100
   debug:
     print_tcp_feedback: false
