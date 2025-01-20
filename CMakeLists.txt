@@ -148,8 +148,8 @@ add_library(whi_arm_hardware ${WHI_SDK_SRC})
 target_link_libraries(whi_arm_hardware
    ${catkin_LIBRARIES}
    sockpp
-   jakaAPI
    jsoncpp
+   jakaAPI
 )
 
 ## Declare a C++ executable

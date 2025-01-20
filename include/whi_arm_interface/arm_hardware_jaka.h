@@ -46,7 +46,7 @@ namespace whi_arm_hardware_interface
         void read();
         void write(ros::Duration ElapsedTime);
         void initializing();
-        // jaka TCP protocol related
+        // TCP protocol related
         bool tcp_init();
         bool tcp_close();
         bool tcp_state();
@@ -55,7 +55,7 @@ namespace whi_arm_hardware_interface
         bool tcp_setIo(int Addr, int Level);
         bool tcp_isProtective();
         bool tcp_protectiveRecover();
-        // jakaAPI related
+        // API related
         bool api_init(const std::string& Addr);
         void api_close();
         bool api_read();

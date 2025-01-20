@@ -276,8 +276,11 @@ namespace whi_arm_hardware_interface
         {
             if (name_ == hardware[API])
             {
-                api_instance_ = std::make_unique<JAKAZuRobot>();
-                res = api_instance_->login_in(addr_.c_str()) == ERR_SUCC;
+                if (!api_instance_)
+                {
+                    api_instance_ = std::make_unique<JAKAZuRobot>();
+                }
+                res = (api_instance_->login_in(addr_.c_str()) == ERR_SUCC);
             }
             else if (name_ == hardware[SOCKET])
             {

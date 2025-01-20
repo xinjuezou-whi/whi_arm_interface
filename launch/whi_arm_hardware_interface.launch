@@ -4,8 +4,7 @@
   <arg name="arm" default="chin"/>
   <arg name="arm_model" default="frame"/>
   <arg name="config_pkg" default="$(eval '$(find ' + arg('arm') + '_' + arg('arm_model') + '_moveit_config)')"/>
-  <arg name="description_pkg" default="$(eval '$(find ' + arg('arm') + '_' + arg('arm_model') + '_description)')" unless="$(eval arg('arm') == 'jaka')"/>
-  <arg name="description_pkg" default="$(find jaka_description)" if="$(eval arg('arm') == 'jaka')"/>
+  <arg name="description_pkg" default="$(eval '$(find ' + arg('arm') + '_description)')"/>
 
   <!-- params -->
   <rosparam file="$(find whi_arm_interface)/config/hardware_$(arg arm).yaml" command="load"/>
