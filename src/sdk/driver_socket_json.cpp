@@ -131,8 +131,7 @@ bool DriverSocketJson::sendCommand(const std::string& Command)
 {
 	if (connector_->is_open())
 	{
-		std::vector<uint8_t> coded = codingCommand(Command);
-		return connector_->write_n(coded.data(), coded.size()).value() == coded.size();
+		return connector_->write(Command).value() == Command.length();
 	}
 	else
 	{
@@ -235,17 +234,6 @@ std::string DriverSocketJson::readFeedback()
 	}
 
 	return std::string();
-}
-
-std::vector<uint8_t> DriverSocketJson::codingCommand(const std::string& Command) const
-{
-	std::vector<uint8_t> coded;
-	for (const auto& it : Command)
-	{
-		coded.push_back(it);
-	}
-
-	return coded;
 }
 
 void DriverSocketJson::setParamsKey(const char*const* Keys, int Size)

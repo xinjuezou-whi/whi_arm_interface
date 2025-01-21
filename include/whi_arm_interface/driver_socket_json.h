@@ -50,7 +50,6 @@ public:
 	std::vector<std::string> readParamStr(const std::string& Param);
 	bool sendCommand(const std::string& Command);
 	std::string readFeedback();
-	std::vector<uint8_t> codingCommand(const std::string& Command) const;
 	void setParamsKey(const char*const* Keys, int Size);
 
 protected:
