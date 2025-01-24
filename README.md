@@ -56,6 +56,10 @@ Take the JAKA a5 as an example:
 roslaunch whi_arm_interface whi_arm_hardware_interface.launch arm:=jaka arm_model:=a5
 ```
 
+## Limited
+1. For FAIR series, collision check and recovery have not been implemented yet due to absence of protocol
+2. xxx
+
 ## Permission for /dev/ttyama0
 
 For the AR arm which takes the serial port to communicate, the following command can be used to grant the serial privilege:
