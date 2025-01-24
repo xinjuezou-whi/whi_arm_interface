@@ -6,7 +6,8 @@
   <arg name="vehicle" default="L1"/>
   <arg name="vehicle_model" default="differential"/>
   <arg name="config_pkg" default="$(eval '$(find ' + arg('arm') + '_' + arg('arm_model') + '_moveit_config)')"/>
-  <!-- <arg name="description_pkg" default="$(eval '$(find ' + arg('arm') + '_description)')"/> -->
+  <arg name="description_pkg" default="$(eval '$(find ' + arg('arm') + '_' + arg('arm_model') + '_description)')" unless="$(eval arg('arm') == 'jaka')"/>
+  <arg name="description_pkg" default="$(find jaka_description)" if="$(eval arg('arm') == 'jaka')"/>
 
   <!-- params -->
   <rosparam file="$(find whi_arm_interface)/config/hardware_$(arg arm).yaml" command="load"/>

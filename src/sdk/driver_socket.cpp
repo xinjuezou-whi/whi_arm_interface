@@ -41,7 +41,7 @@ DriverSocket::~DriverSocket()
 	connector_->close();
 }
 
-std::vector<std::string> split(const std::string SrcStr, const std::string RegexStr)
+std::vector<std::string> split(const std::string& SrcStr, const std::string& RegexStr)
 {
     std::regex regexz(RegexStr);
     return { std::sregex_token_iterator(SrcStr.begin(), SrcStr.end(), regexz, -1),

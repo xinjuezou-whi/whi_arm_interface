@@ -150,6 +150,7 @@ target_link_libraries(whi_arm_hardware
    sockpp
    jsoncpp
    jakaAPI
+  #  fairino
 )
 
 ## Declare a C++ executable

@@ -22,6 +22,7 @@ Changelog:
 #include "whi_arm_interface/arm_hardware_ar.h"
 #include "whi_arm_interface/arm_hardware_chin.h"
 #include "whi_arm_interface/arm_hardware_jaka.h"
+#include "whi_arm_interface/arm_hardware_fair.h"
 
 #define ASYNC 1
 
@@ -35,7 +36,7 @@ void signalHandler(int Signal)
 int main(int argc, char** argv)
 {
 	/// node version and copyright announcement
-	std::cout << "\nWHI arm interface VERSION 03.07.2" << std::endl;
+	std::cout << "\nWHI arm interface VERSION 03.08.1" << std::endl;
 	std::cout << "Copyright © 2022-2025 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
 	/// ros infrastructure
@@ -59,6 +60,10 @@ int main(int argc, char** argv)
 	else if (arm == "jaka")
 	{
 		armHardware = std::make_unique<whi_arm_hardware_interface::JakaHardwareInterface>(nodeHandle);
+	}
+	else if (arm == "fr")
+	{
+		armHardware = std::make_unique<whi_arm_hardware_interface::FairHardwareInterface>(nodeHandle);
 	}
 
 	// override the default ros sigint handler, with this override the shutdown will be gracefull
