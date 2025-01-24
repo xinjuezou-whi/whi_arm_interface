@@ -8,7 +8,7 @@ arm hardware interface
 | AR      | ar3     | Passed   |
 | Chin    | All     | Passed   |
 | JAKA    | All     | Passed   |
-| Fairino | All     | on going |
+| Fairino | All     | Passed   |
 
 ## Dependency
 
@@ -37,6 +37,24 @@ rosservice call /whi_arm_interface/arm_ready
 ## Publish topics
 **arm_motion_state**(whi_interfaces::WhiMotionState)
 Publishes the state of arm periodically
+
+## Usage
+First, it requires the moveit_config packages that WHI refactors:
+
+moveit_config packages for [AR series](https://github.com/xinjuezou-whi/ar_arm.git), [Chin series](https://github.com/xinjuezou-whi/chin_arm), [JAKA series](https://github.com/xinjuezou-whi/jaka_robot), and [FAIR series](https://github.com/xinjuezou-whi/frcobot_ros)
+
+Then, launch the node with the specified arm brand and its model:
+| Brand   | Seriels |
+|---------|---------|
+| ar      | ar3     |
+| chin    | crb7    |
+| jaka    | zu5, a5 |
+| fr      | 5v6     |
+
+Take the JAKA a5 as an example:
+```
+roslaunch whi_arm_interface whi_arm_hardware_interface.launch arm:=jaka arm_model:=a5
+```
 
 ## Permission for /dev/ttyama0
 
