@@ -44,6 +44,8 @@ namespace whi_arm_hardware_interface
         void initializing();
         // TCP protocol related
         std::string packData(const std::string& Command) const;
+        template<typename T> struct IsVector : public std::false_type {};
+        template<typename T, typename A> struct IsVector<std::vector<T, A>> : public std::true_type {};
         template<typename T> std::string packData(const std::string& Command, const std::vector<T>& Params) const
         {
             if (auto search = CMD_MAP_.find(Command); search != CMD_MAP_.end())
@@ -51,13 +53,43 @@ namespace whi_arm_hardware_interface
                 std::string params("(");
                 for (const auto& it : Params)
                 {
-                    if constexpr (std::is_same<T, std::string>::value)
+                    if constexpr (IsVector<T>::value)
                     {
-                        params += it + ",";
+                        if (it.size() > 1)
+                        {
+                            params += "{";
+                        }
+                        for (const auto& subIt : it)
+                        {
+                            if constexpr (std::is_same<T, std::string>::value)
+                            {
+                                params += subIt + ",";
+                            }
+                            else
+                            {
+                                params += std::to_string(subIt) + ",";
+                            }
+                        }
+                        params.pop_back();
+                        if (it.size() > 1)
+                        {
+                            params += "},";
+                        }
+                        else
+                        {
+                            params += ",";
+                        }
                     }
                     else
                     {
-                        params += std::to_string(it) + ",";
+                        if constexpr (std::is_same<T, std::string>::value)
+                        {
+                            params += it + ",";
+                        }
+                        else
+                        {
+                            params += std::to_string(it) + ",";
+                        }
                     }
                 }
                 if (params.length() > 1)
@@ -115,6 +147,7 @@ namespace whi_arm_hardware_interface
         {
             {"GetSoftwareVersion", 905},
             {"RobotEnable", 632},
+            {"SetAnticollision", 305},
             {"Mode", 303},
             {"SetSpeed", 983},
             {"SetLoadWeight", 306},

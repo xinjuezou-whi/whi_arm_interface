@@ -414,21 +414,32 @@ namespace whi_arm_hardware_interface
     bool FairHardwareInterface::tcp_init()
     {
         std::vector<std::string> requests;
+
         std::vector<int> paramsEnable{ 0 };
         requests.push_back(packData<int>("RobotEnable", paramsEnable));
+
         // delay 200ms
         requests.push_back("delay:200");
+
+        std::vector<std::vector<int>> paramsCollision{ {0}, {1, 1, 1, 1, 1, 1}, {0} };
+        requests.push_back(packData<std::vector<int>>("SetAnticollision", paramsCollision));
+
         std::vector<int> paramsMode{ 0 };
         requests.push_back(packData<int>("Mode", paramsMode));
+
         std::vector<int> paramsSpeed{ int(velocity_scale_ * 100.0) };
         requests.push_back(packData<int>("SetSpeed", paramsSpeed));
+
         std::vector<std::string> paramsWeight{ "0", std::to_string(payload_weight_) };
         requests.push_back(packData<std::string>("SetLoadWeight", paramsWeight));
+
         std::vector<std::string> paramsCentroid{ "0",
             std::to_string(payload_to_tcp_[0]), std::to_string(payload_to_tcp_[1]), std::to_string(payload_to_tcp_[2]) };
         requests.push_back(packData<std::string>("SetLoadCoord", paramsCentroid));
+
         paramsEnable[0] = 1;
         requests.push_back(packData<int>("RobotEnable", paramsEnable));
+
         // delay 200ms
         requests.push_back("delay:200");
 
