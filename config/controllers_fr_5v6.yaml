@@ -40,12 +40,12 @@ whi_arm_interface:
         # set it big enough especially for position controller
         goal_time: 2.0 # 0.5 sec
         stopped_velocity_tolerance: 0.025 # 0.01 rad/s
-        j1: { trajectory: 0.2, goal: 0.1 }
-        j2: { trajectory: 0.2, goal: 0.1 }
-        j3: { trajectory: 0.2, goal: 0.1 }
-        j4: { trajectory: 0.2, goal: 0.1 }
-        j5: { trajectory: 0.2, goal: 0.1 }
-        j6: { trajectory: 0.2, goal: 0.1 }
+        j1: { trajectory: 0.5, goal: 0.1 }
+        j2: { trajectory: 0.5, goal: 0.1 }
+        j3: { trajectory: 0.5, goal: 0.1 }
+        j4: { trajectory: 0.5, goal: 0.1 }
+        j5: { trajectory: 0.5, goal: 0.1 }
+        j6: { trajectory: 0.5, goal: 0.1 }
       gains: # Required if controlling a velocity interface
         j1: {p: 100,  d: 1, i: 1, i_clamp: 1}
         j2: {p: 100,  d: 1, i: 1, i_clamp: 1}
