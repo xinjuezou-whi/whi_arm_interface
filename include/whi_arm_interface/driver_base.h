@@ -19,6 +19,8 @@ Changelog:
 
 #include <memory>
 #include <string>
+#include <map>
+#include <iostream>
 
 class DriverBase
 {

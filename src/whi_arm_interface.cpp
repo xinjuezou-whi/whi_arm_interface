@@ -1,0 +1,221 @@
+﻿/******************************************************************
+node to handle arm hardwares
+it is a hardware resouces layer for ros_controller
+
+Features:
+- hardware resouces setup logic
+- xxx
+
+Written by Xinjue Zou, xinjue.zou.whi@gmail.com
+
+Apache License Version 2.0, check LICENSE for more information.
+All text above must be included in any redistribution.
+
+Changelog:
+2022-06-13: Initial version
+2026-06-24: Migrate to ROS 2
+2026-xx-xx: xxx
+******************************************************************/
+#include "whi_arm_interface/whi_arm_interface.h"
+#include "whi_arm_interface/arm_hardware_ar.h"
+#include "whi_arm_interface/arm_hardware_chin.h"
+#include "whi_arm_interface/arm_hardware_jaka.h"
+#include "whi_arm_interface/arm_hardware_fair.h"
+
+namespace whi_arm_hardware_interface
+{
+    hardware_interface::CallbackReturn WhiArmInterface::on_init(const hardware_interface::HardwareComponentInterfaceParams& Params)
+    {
+        /// node version and copyright announcement
+		std::cout << "\nWHI arm interface VERSION 04.08.2" << std::endl;
+		std::cout << "Copyright © 2022-2026 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
+
+        if (hardware_interface::SystemInterface::on_init(Params) !=
+            hardware_interface::CallbackReturn::SUCCESS)
+        {
+            RCLCPP_FATAL_STREAM(get_logger(), "\033[1;31m" <<
+				"failed to load contol params"
+				<< "\033[0m");
+            return hardware_interface::CallbackReturn::ERROR;
+        }
+
+        if (info_.hardware_parameters["arm_series"] == "ar")
+        {
+            std::vector<std::string> names;
+            for (const auto& it : info_.joints)
+            {
+                names.push_back(it.name);
+            }
+            hardware_ = std::make_unique<ArHardwareInterface>(info_.hardware_parameters["hw_config"], get_node(), names);
+        }
+        else if (info_.hardware_parameters["arm_series"] == "chin")
+        {
+			hardware_ = std::make_unique<ChinHardwareInterface>(info_.hardware_parameters["hw_config"], get_node());
+        }
+        else if (info_.hardware_parameters["arm_series"] == "jaka")
+        {
+			hardware_ = std::make_unique<FairHardwareInterface>(info_.hardware_parameters["hw_config"], get_node());
+        }
+        else if (info_.hardware_parameters["arm_series"] == "fr")
+        {
+			hardware_ = std::make_unique<JakaHardwareInterface>(info_.hardware_parameters["hw_config"], get_node());
+        }
+        else
+        {
+            RCLCPP_FATAL_STREAM(get_logger(), "\033[1;31m" << "unsupported series" << "\033[0m");
+            return hardware_interface::CallbackReturn::ERROR;
+        }
+
+        hw_start_seconds_ = std::max(0.0, stod(info_.hardware_parameters["hw_start_duration_seconds"]));
+        hw_stop_seconds_ = std::max(0.0, stod(info_.hardware_parameters["hw_stop_duration_seconds"]));
+
+        return hardware_interface::CallbackReturn::SUCCESS;
+    }
+
+    hardware_interface::CallbackReturn WhiArmInterface::on_configure(
+        const rclcpp_lifecycle::State& /*PreState*/)
+    {
+        // BEGIN: This part here is for exemplary purposes - Please do not copy to your production code
+        RCLCPP_INFO(get_logger(), "Configuring ...please wait...");
+
+        for (auto i = 0; i < hw_start_seconds_; ++i)
+        {
+            rclcpp::sleep_for(std::chrono::seconds(1));
+            RCLCPP_INFO(get_logger(), "%.1f seconds left...", hw_start_seconds_ - i);
+        }
+        // END: This part here is for exemplary purposes - Please do not copy to your production code
+
+        // reset values always when configuring hardware
+        for (const auto& [name, descr] : joint_state_interfaces_)
+        {
+            set_state(name, 0.0);
+        }
+        for (const auto& [name, descr] : joint_command_interfaces_)
+        {
+            set_command(name, 0.0);
+        }
+
+        RCLCPP_INFO(get_logger(), "Hardware interface successfully configured!");
+
+        return hardware_interface::CallbackReturn::SUCCESS;
+    }
+
+    hardware_interface::CallbackReturn WhiArmInterface::on_activate(
+        const rclcpp_lifecycle::State& /*PreState*/)
+    {
+        RCLCPP_INFO(get_logger(), "Activating hardware interface...please wait...");
+
+        for (auto i = 0; i < hw_start_seconds_; ++i)
+        {
+            rclcpp::sleep_for(std::chrono::seconds(1));
+            RCLCPP_INFO(get_logger(), "%.1f seconds left...", hw_start_seconds_ - i);
+        }
+
+        // command and state should be equal when starting
+        for (const auto& [name, descr] : joint_command_interfaces_)
+        {
+            set_command(name, get_state(name));
+        }
+
+        RCLCPP_INFO_STREAM(get_logger(),
+            "\033[1;32m" << "Hardware interface successfully started!" << "\033[0m");
+
+        return hardware_interface::CallbackReturn::SUCCESS;
+    }
+
+    hardware_interface::CallbackReturn WhiArmInterface::on_deactivate(
+        const rclcpp_lifecycle::State& /*PreState*/)
+    {
+        RCLCPP_INFO(get_logger(), "Deactivating hardware interface ...please wait...");
+
+        hardware_.reset(nullptr);
+        for (auto i = 0; i < hw_stop_seconds_; ++i)
+        {
+            rclcpp::sleep_for(std::chrono::seconds(1));
+            RCLCPP_INFO(get_logger(), "%.1f seconds left...", hw_stop_seconds_ - i);
+        }
+
+        RCLCPP_INFO_STREAM(get_logger(),
+            "\033[1;32m" << "Hardware interface successfully stopped!" << "\033[0m");
+
+        return hardware_interface::CallbackReturn::SUCCESS;
+    }
+
+    std::vector<hardware_interface::StateInterface> WhiArmInterface::export_state_interfaces()
+    {
+        hardware_->joint_positions_.resize(info_.joints.size());
+        hardware_->joint_velocities_.resize(info_.joints.size());
+        hardware_->joint_efforts_.resize(info_.joints.size());
+
+        std::vector<hardware_interface::StateInterface> stateInterfaces;
+        for (size_t i = 0; i < info_.joints.size(); ++i)
+        {
+            stateInterfaces.emplace_back(hardware_interface::StateInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_POSITION, &hardware_->joint_positions_[i]));
+
+            stateInterfaces.emplace_back(hardware_interface::StateInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &hardware_->joint_velocities_[i]));
+
+            stateInterfaces.emplace_back(hardware_interface::StateInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_ACCELERATION, &hardware_->joint_acceleration_commands_[i]));
+
+            stateInterfaces.emplace_back(hardware_interface::StateInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_EFFORT, &hardware_->joint_efforts_[i]));
+        }
+
+        return stateInterfaces;
+    }
+
+    std::vector<hardware_interface::CommandInterface> WhiArmInterface::export_command_interfaces()
+    {
+        hardware_->joint_position_commands_.resize(info_.joints.size());
+        hardware_->joint_velocity_commands_.resize(info_.joints.size());
+        hardware_->joint_effort_commands_.resize(info_.joints.size());
+
+        auto has_cmd_interface = [](const hardware_interface::ComponentInfo& Joint, const std::string& InterfaceName)
+        {
+            auto it = find_if(Joint.command_interfaces.begin(), Joint.command_interfaces.end(),
+                [&InterfaceName](const hardware_interface::InterfaceInfo& obj)
+                {
+                    return obj.name == InterfaceName;
+                });
+            return it != Joint.command_interfaces.end();
+        };
+
+        std::vector<hardware_interface::CommandInterface> commandInterfaces;
+        for (size_t i = 0; i < info_.joints.size(); ++i)
+        {
+            commandInterfaces.emplace_back(hardware_interface::CommandInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_POSITION, &hardware_->joint_position_commands_[i]));
+
+            commandInterfaces.emplace_back(hardware_interface::CommandInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &hardware_->joint_velocity_commands_[i]));
+
+            if (has_cmd_interface(info_.joints[i], hardware_interface::HW_IF_EFFORT)) {
+            commandInterfaces.emplace_back(hardware_interface::CommandInterface(
+                info_.joints[i].name, hardware_interface::HW_IF_EFFORT, &hardware_->joint_effort_commands_[i]));
+            }
+        }
+
+        return commandInterfaces;
+    }
+
+    hardware_interface::return_type WhiArmInterface::read(const rclcpp::Time& /*Time*/,
+        const rclcpp::Duration& Period)
+    {
+        hardware_->read(this, Period.seconds());
+
+        return hardware_interface::return_type::OK;
+    }
+
+    hardware_interface::return_type WhiArmInterface::write(const rclcpp::Time& /*Time*/,
+        const rclcpp::Duration& Period)
+    {
+        hardware_->write(this, Period.seconds());
+
+        return hardware_interface::return_type::OK;
+    }
+}  // namespace whi_arm_hardware_interface
+
+#include "pluginlib/class_list_macros.hpp"
+PLUGINLIB_EXPORT_CLASS(whi_arm_hardware_interface::WhiArmInterface, hardware_interface::SystemInterface)

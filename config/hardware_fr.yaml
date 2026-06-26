@@ -2,8 +2,8 @@ whi_arm_interface:
   loop_hz: 50 # hz
   shutdown_patience: 5000 #ms
   velocity_scale: 1.0
-  payload_weight: 0 # unit Kg
-  payload_to_tcp: [0, 0, 0]
+  payload_weight: 0.0 # unit Kg
+  payload_to_tcp: [0.0, 0.0, 0.0]
   hardware: socket #api
   startup_duration: 10 #s
   socket:

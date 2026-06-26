@@ -1,5 +1,5 @@
 /******************************************************************
-arm hardware interface of ar series under ROS 1
+arm hardware interface of ar series under ROS 2
 it is a hardware resouces layer for ros_controller
 
 Features:
@@ -13,29 +13,33 @@ All text above must be included in any redistribution.
 
 Changelog:
 2022-06-16: Initial version
-2022-xx-xx: xxx
+2026-06-25: Migrate to ROS 2
+2026-xx-xx: xxx
 ******************************************************************/
 #pragma once
-#include "whi_arm_hardware_base.h"
+#include "arm_hardware_base.h"
 
 #include <serial/serial.h>
 
 namespace whi_arm_hardware_interface
 {
+    // forward declaration
+    class HwConfig;
+
     class ArHardwareInterface : public ArmHardware
     {
     public:
-        ArHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle);
+        ArHardwareInterface(const std::string& Config, rclcpp::Node::SharedPtr Node, const std::vector<std::string>& JointNames);
         virtual ~ArHardwareInterface() = default;
 
     public:
+        void read(WhiArmInterface* HwIf, double Dt) override;
+        void write(WhiArmInterface* HwIf, double Dt) override;
         void quit() override;
 
     protected:
-        void init();
-        void update(const ros::TimerEvent& Event);
-        void read();
-        void write(ros::Duration ElapsedTime);
+        void init(const std::vector<std::string>& JointNames);
+        bool parseConfig(const std::string& Config) override;
 
     protected:
         void callbackResponse(const std::string& State);
@@ -44,19 +48,9 @@ namespace whi_arm_hardware_interface
         enum HomingState { STA_TO_HOME = 0, STA_HOMING, STA_HOMED };
 
     protected:
+        std::shared_ptr<HwConfig> hw_config_{ nullptr };
         const std::string name_{ "mega2560" };
         std::vector<char> axes_prefix_;
-        std::vector<double> steps_per_deg_;
-        std::vector<int> forward_dir_;
-        std::vector<int> limits_dir_;
-        std::vector<double> home_offsets_;
-        std::vector<double> home_kinematics_;
         int homing_state_{ STA_HOMED };
-        int speed_rate_{ 25 };
-        int acc_duration_{ 15 };
-        int acc_rate_{ 10 };
-        int dec_duration_{ 20 };
-        int dec_rate_{ 5 };
-        bool mode_close_{ true };
     };
 }

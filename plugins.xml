@@ -1,0 +1,9 @@
+<library path="whi_arm_interface">
+  <class name="whi_arm_interface/WhiArmInterface"
+         type="whi_arm_interface::WhiArmInterface"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+      Plugin for motion hardware interface
+    </description>
+  </class>
+</library>

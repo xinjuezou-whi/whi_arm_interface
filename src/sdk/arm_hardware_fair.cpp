@@ -16,35 +16,37 @@ All text above must be included in any redistribution.
 #include "whi_arm_interface/driver_socket_fair.h"
 #include "whi_arm_interface/fairAPI/robot_error.h"
 #include "whi_arm_interface/fairAPI/robot_types.h"
-#include "whi_interfaces/WhiMotionState.h"
+#include "whi_interfaces/msg/whi_motion_state.hpp"
+#include "whi_arm_interface/hw_config_fair.h"
 #include <json/json.h>
+
+#include <rclcpp/rclcpp.hpp>
 #include <angles/angles.h>
-#include <trajectory_msgs/JointTrajectory.h>
-#include <controller_manager_msgs/ListControllers.h>
+// #include <trajectory_msgs/msg/joint_trajectory.hpp> // TODO
+// #include <controller_manager_msgs/srv/list_controllers.hpp> // TODO
 
 #include <thread>
 #include <regex>
 
 namespace whi_arm_hardware_interface
 {
-    using namespace hardware_interface;
-
-    FairHardwareInterface::FairHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle)
-        : ArmHardware(NodeHandle)
+    FairHardwareInterface::FairHardwareInterface(const std::string& Config, rclcpp::Node::SharedPtr Node)
+        : ArmHardware(Config, Node)
     {
+        parseConfig(Config);
         init();
     }
 
     void FairHardwareInterface::quit()
     {
         // give time to thirdparty dependencies
-        std::this_thread::sleep_for(std::chrono::milliseconds(shutdown_patience_));
+        std::this_thread::sleep_for(std::chrono::milliseconds(hw_config_->shutdown_patience_));
 
-        if (name_ == hardware[API])
+        if (hw_config_->hardware_ == hardware[API])
         {
             api_close();
         }
-        else if (name_ == hardware[SOCKET])
+        else if (hw_config_->hardware_ == hardware[SOCKET])
         {
             tcp_close();
         }
@@ -65,126 +67,42 @@ namespace whi_arm_hardware_interface
 
     void FairHardwareInterface::init()
     {
-        // general params
-        node_handle_->param("shutdown_patience", shutdown_patience_, 0);
-
-        // joints
-        node_handle_->getParam("joints", joint_names_);
-        if (joint_names_.size() == 0)
-        {
-            // especially for rosrun mode
-            std::string sum;
-            for (int i = 0; i < 6; ++i)
-            {
-                joint_names_.push_back("j" + std::to_string(i + 1));
-                sum += joint_names_.back() + "\n";
-            }
-            sum.pop_back();
-            ROS_WARN((std::string("No joints found on parameter server for controller. Name them with:\n") + sum).c_str());
-        }
-
         // drivers
-        node_handle_->param("startup_duration", startup_duration_, 10);
-        node_handle_->param("velocity_scale", velocity_scale_, 1.0);
-        node_handle_->param("payload_weight", payload_weight_, 0.0);
-        if (node_handle_->getParam("payload_to_tcp", payload_to_tcp_))
+        if (hw_config_->payload_to_tcp_.empty())
         {
-            for (auto& it : payload_to_tcp_)
-            {
-                it *= 1000.0; // FAIR requires mm
-            }
+            hw_config_->payload_to_tcp_.resize(3);
         }
         else
         {
-            payload_to_tcp_.resize(3);
+            // FAIR requires mm
+            for (auto& it : hw_config_->payload_to_tcp_)
+            {
+                it *= 1000.0; 
+            }
         }
-        node_handle_->param("socket/addr", addr_, std::string("10.5.5.1"));
-        node_handle_->param("hardware", name_, std::string(hardware[SOCKET]));
-        node_handle_->param("loop_hz", loop_hz_, 10.0);
+
         initializing();
-
-        // resize vectors
-        num_joints_ = joint_names_.size();
-        joint_position_.resize(num_joints_);
-        joint_velocity_.resize(num_joints_);
-        joint_effort_.resize(num_joints_);
-        joint_position_command_.resize(num_joints_);
-        joint_velocity_command_.resize(num_joints_);
-        joint_acceleration_command_.resize(num_joints_);
-        joint_effort_command_.resize(num_joints_);
-
-        // initialize controller
-        for (std::size_t i = 0; i < num_joints_; ++i)
-        {
-            // create joint state interface
-            JointStateHandle jointStateHandle(joint_names_[i], &joint_position_[i], &joint_velocity_[i], &joint_effort_[i]);
-            joint_state_interface_.registerHandle(jointStateHandle);
-
-            // create joint command interface: position
-            JointHandle jointPositionHandle(jointStateHandle, &joint_position_command_[i]);
-            position_joint_interface_.registerHandle(jointPositionHandle);
-            scaled_controllers::ScaledJointHandle scaledPosJointHandle(jointStateHandle, &joint_position_command_[i], &velocity_scale_);
-            scaled_position_joint_interface_.registerHandle(scaledPosJointHandle);
-
-            // create joint command interface: position, velocity
-            PosVelJointHandle jointPosVelHandle(jointStateHandle,
-                &joint_position_command_[i], &joint_velocity_command_[i]);
-            pos_vel_joint_interface_.registerHandle(jointPosVelHandle);               
-
-            // create joint command interface: position, velocity, acceleration
-            PosVelAccJointHandle jointPosVelAccHandle(jointStateHandle,
-                &joint_position_command_[i], &joint_velocity_command_[i], &joint_acceleration_command_[i]);
-            pos_vel_acc_joint_interface_.registerHandle(jointPosVelAccHandle);
-
-            // create joint command interface: velocity
-            JointHandle jointVelocityHandle(jointStateHandle, &joint_velocity_command_[i]);
-            velocity_joint_interface_.registerHandle(jointVelocityHandle);
-            scaled_controllers::ScaledJointHandle scaledVelJointHandle(jointStateHandle, &joint_velocity_command_[i], &velocity_scale_);
-            scaled_velocity_joint_interface_.registerHandle(scaledVelJointHandle);
-        }
-        registerInterface(&joint_state_interface_);
-        registerInterface(&position_joint_interface_);
-        registerInterface(&scaled_position_joint_interface_);
-        registerInterface(&pos_vel_joint_interface_);
-        registerInterface(&pos_vel_acc_joint_interface_);
-        registerInterface(&velocity_joint_interface_);
-        registerInterface(&scaled_velocity_joint_interface_);
-
-        // controller
-        controller_manager_ = std::make_unique<controller_manager::ControllerManager>(this, *node_handle_);
-        client_controller_manager_ = std::make_unique<ros::ServiceClient>(
-            node_handle_->serviceClient<controller_manager_msgs::ListControllers>("controller_manager/list_controllers"));
-
-        ros::Duration updateFreq = ros::Duration(1.0 / loop_hz_);
-        non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(
-            updateFreq, std::bind(&FairHardwareInterface::update, this, std::placeholders::_1)));
     }
 
-    void FairHardwareInterface::update(const ros::TimerEvent& Event)
+    bool FairHardwareInterface::parseConfig(const std::string& Config)
     {
-        elapsed_time_ = ros::Duration(Event.current_real - Event.last_real);
-        read();
-        controller_manager_->update(ros::Time::now(), elapsed_time_);
-        if (!is_protective_)
-        {
-            write(elapsed_time_);
-        }
+        return false;
     }
 
-    void FairHardwareInterface::read()
+    void FairHardwareInterface::read(WhiArmInterface* HwIf, double Dt)
     {
         if (initialized_)
         {
             static bool first = true;
 
             bool res = true;
-            if (name_ == hardware[API])
+            if (hw_config_->hardware_ == hardware[API])
             {
                 res = api_read();
                 // only get_robot_status is multi-thread safe, therefore taking synchronous mech
                 is_protective_ = api_isProtective();
             }
-            else if (name_ == hardware[SOCKET])
+            else if (hw_config_->hardware_ == hardware[SOCKET])
             {
                 res = tcp_read();
                 is_protective_ = tcp_isProtective();
@@ -192,145 +110,117 @@ namespace whi_arm_hardware_interface
 
             if (first && res)
             {
-                joint_position_command_ = joint_position_;
+                joint_position_commands_ = joint_positions_;
                 first = false;
                 standby_ = true;
             }
 
             if (is_protective_)
             {
-                // get the controller name through service
-                std::string controllerName("controllers/scaled_pos_controller");
-                controller_manager_msgs::ListControllers srv;
-                if (client_controller_manager_->call(srv))
-                {
-                    for (const auto& it : srv.response.controller)
-                    {
-                        if (it.state == "running" && !it.claimed_resources.front().resources.empty())
-                        {
-                            controllerName.assign(it.name);
-                        }
-                    }
-                }
-                // abort the goal with preemption policy
-                auto pub_preempt = std::make_unique<ros::Publisher>(
-                    node_handle_->advertise<trajectory_msgs::JointTrajectory>(controllerName + "/command", 1));
-                trajectory_msgs::JointTrajectory preempt;
-                pub_preempt->publish(preempt);
+                trajectory_action_client_->async_cancel_all_goals();
 
-                whi_interfaces::WhiMotionState msg;
-                msg.state = whi_interfaces::WhiMotionState::STA_FAULT;
-                if (pub_motion_state_)
-                {
-                    pub_motion_state_->publish(msg);
-                }
-                ROS_ERROR_STREAM("arm entered protective state");
+                publishState(whi_interfaces::msg::WhiState::WARN, "state", "protective stopped");
+                RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                    "arm entered protective state"
+                    << "\033[0m");
 
-                if (name_ == hardware[API])
+                if (hw_config_->hardware_ == hardware[API])
                 {
                     api_protectiveRecover();
                 }
-                else if (name_ == hardware[SOCKET])
+                else if (hw_config_->hardware_ == hardware[SOCKET])
                 {
                     tcp_protectiveRecover();
                 }
             }
             else
             {
-                whi_interfaces::WhiMotionState msg;
-                msg.state = whi_interfaces::WhiMotionState::STA_STANDBY;
-                if (pub_motion_state_)
-                {
-                    pub_motion_state_->publish(msg);
-                }
+                publishState(whi_interfaces::msg::WhiState::INFO, "state", "standby");
             }
         }
     }
 
-    void FairHardwareInterface::write(ros::Duration ElapsedTime)
+    void FairHardwareInterface::write(WhiArmInterface* HwIf, double Dt)
     {
         if (standby_)
         {
-            if (name_ == hardware[API])
+            if (hw_config_->hardware_ == hardware[API])
             {
-                api_servoPositions(joint_position_command_, ElapsedTime.toSec());
+                api_servoPositions(joint_position_commands_, Dt);
             }
-            else if (name_ == hardware[SOCKET])
+            else if (hw_config_->hardware_ == hardware[SOCKET])
             {
-                tcp_servoPositions(joint_position_command_, ElapsedTime.toSec());
+                tcp_servoPositions(joint_position_commands_, Dt);
             }
         }
     }
 
     void FairHardwareInterface::initializing()
     {
-        while (!ping(addr_))
+        auto addr = hw_config_->hardware_ == hardware[API] ? hw_config_->api_addr_ : hw_config_->socket_addr_;
+        while (!ping(addr))
         {
-            ROS_WARN_STREAM("failed to ping:" << addr_ << ", attempt to another try in " << startup_duration_ << " seconds");
-            std::this_thread::sleep_for(std::chrono::seconds(startup_duration_));
+            RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"),
+                "failed to ping:" << addr << ", attempt to another try in " << hw_config_->startup_duration_ << " seconds");
+            std::this_thread::sleep_for(std::chrono::duration<double>(hw_config_->startup_duration_));
         }
         
         bool res = false;
         while (!res)
         {
-            if (name_ == hardware[API])
+            if (hw_config_->hardware_ == hardware[API])
             {
                 // if (!api_instance_)
                 // {
                 //     api_instance_ = std::make_unique<whi_fair::FRRobot>();
                 // }
-                // res = (api_instance_->RPC(addr_.c_str()) == ERR_SUCCESS);
+                // res = (api_instance_->RPC(addr.c_str()) == ERR_SUCCESS);
                 // char version[64] = {0};
                 // api_instance_->GetSDKVersion(version);
                 // if (!res)
                 // {
-                //     ROS_ERROR_STREAM("failed to instance FAIR SDK, please check the version: " << version);
+                //     RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to instance FAIR SDK, please check the version: " << version);
                 // }
             }
-            else if (name_ == hardware[SOCKET])
+            else if (hw_config_->hardware_ == hardware[SOCKET])
             {
-                drivers_map_[name_] = std::make_unique<DriverSocketFair>(name_, addr_, 8080);
-                bool printTcpFeedback;
-                node_handle_->param("debug/print_tcp_feedback", printTcpFeedback, false);
-                drivers_map_[name_]->set_debug_params(std::map<std::string, bool>
-                    {{ "print_tcp_feedback", printTcpFeedback }});
+                drivers_map_[hw_config_->hardware_] = std::make_unique<DriverSocketFair>(hw_config_->hardware_, addr, 8080);
+                drivers_map_[hw_config_->hardware_]->set_debug_params(
+                    std::map<std::string, bool>{{ "print_tcp_feedback", hw_config_->debug_print_tcp_feedback_ }});
 
                 res = tcp_state();
                 if (!res)
                 {
                     tcp_close();
-                    drivers_map_[name_]->close();
+                    drivers_map_[hw_config_->hardware_]->close();
                 }
             }
 
             if (!res)
             {
-                ROS_WARN_STREAM("failed to setup connection, attempt to another try in " << startup_duration_ << " seconds");
-                std::this_thread::sleep_for(std::chrono::seconds(startup_duration_));
+                RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"),
+                    "failed to setup connection, attempt to another try in " << hw_config_->startup_duration_ << " seconds");
+                std::this_thread::sleep_for(std::chrono::duration<double>(hw_config_->startup_duration_));
             }
         }
 
         while (!initialized_)
         {
-            if (name_ == hardware[API])
+            if (hw_config_->hardware_ == hardware[API])
             {
-                initialized_ = api_init(addr_);
+                initialized_ = api_init(addr);
             }
-            else if (name_ == hardware[SOCKET])
+            else if (hw_config_->hardware_ == hardware[SOCKET])
             {
                 initialized_ = tcp_init();
             }
 
             if (!initialized_)
             {
-                ROS_WARN_STREAM("failed to initialize, attempt to another try in " << startup_duration_ << " seconds");
-                std::this_thread::sleep_for(std::chrono::seconds(startup_duration_));
+                RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"),
+                    "failed to initialize, attempt to another try in " << hw_config_->startup_duration_ << " seconds");
+                std::this_thread::sleep_for(std::chrono::duration<double>(hw_config_->startup_duration_));
             }
-        }
-
-        if (initialized_)
-        {
-            makeOffers();
         }
     }
 
@@ -427,14 +317,14 @@ namespace whi_arm_hardware_interface
         std::vector<int> paramsMode{ 0 };
         requests.push_back(packData<int>("Mode", paramsMode));
 
-        std::vector<int> paramsSpeed{ int(velocity_scale_ * 100.0) };
+        std::vector<int> paramsSpeed{ int(hw_config_->velocity_scale_ * 100.0) };
         requests.push_back(packData<int>("SetSpeed", paramsSpeed));
 
-        std::vector<std::string> paramsWeight{ "0", std::to_string(payload_weight_) };
+        std::vector<std::string> paramsWeight{ "0", std::to_string(hw_config_->payload_weight_) };
         requests.push_back(packData<std::string>("SetLoadWeight", paramsWeight));
 
         std::vector<std::string> paramsCentroid{ "0",
-            std::to_string(payload_to_tcp_[0]), std::to_string(payload_to_tcp_[1]), std::to_string(payload_to_tcp_[2]) };
+            std::to_string(hw_config_->payload_to_tcp_[0]), std::to_string(hw_config_->payload_to_tcp_[1]), std::to_string(hw_config_->payload_to_tcp_[2]) };
         requests.push_back(packData<std::string>("SetLoadCoord", paramsCentroid));
 
         paramsEnable[0] = 1;
@@ -443,7 +333,7 @@ namespace whi_arm_hardware_interface
         // delay 200ms
         requests.push_back("delay:200");
 
-        auto feedbacks = ((DriverSocketFair*)drivers_map_[name_].get())->request(requests);
+        auto feedbacks = ((DriverSocketFair*)drivers_map_[hw_config_->hardware_].get())->request(requests);
         bool res = true;
         for (const auto& it : feedbacks)
         {
@@ -463,7 +353,7 @@ namespace whi_arm_hardware_interface
         std::vector<int> paramsEnable{ 0 };
         requests.push_back(packData<int>("RobotEnable", paramsEnable));
 
-        auto feedbacks = ((DriverSocketFair*)drivers_map_[name_].get())->request(requests);
+        auto feedbacks = ((DriverSocketFair*)drivers_map_[hw_config_->hardware_].get())->request(requests);
         int index = -1, id = 0;
         std::vector<std::string> data;
         auto res = parseFeedback(feedbacks.front(), index, id, data);
@@ -475,7 +365,7 @@ namespace whi_arm_hardware_interface
         std::vector<std::string> requests;
         requests.push_back(packData("GetSoftwareVersion"));
 
-        std::vector<std::string> feedbacks = ((DriverSocketFair*)drivers_map_[name_].get())->request(requests);
+        std::vector<std::string> feedbacks = ((DriverSocketFair*)drivers_map_[hw_config_->hardware_].get())->request(requests);
         int index = -1, id = 0;
         std::vector<std::string> data;
         auto res = parseFeedback(feedbacks.front(), index, id, data);
@@ -492,20 +382,20 @@ namespace whi_arm_hardware_interface
         std::vector<std::string> requests;
         requests.push_back(packData("GetActualJointPosRadian"));
 
-        std::vector<std::string> feedbacks = ((DriverSocketFair*)drivers_map_[name_].get())->request(requests);
+        std::vector<std::string> feedbacks = ((DriverSocketFair*)drivers_map_[hw_config_->hardware_].get())->request(requests);
         int index = -1, id = 0;
         std::vector<std::string> data;
         auto res = parseFeedback(feedbacks.front(), index, id, data);
         if (res && id == CMD_MAP_.at("GetActualJointPosRadian"))
         {
-            for (std::size_t i = 0; i < std::min(joint_position_.size(), data.size()); ++i)
+            for (std::size_t i = 0; i < std::min(joint_positions_.size(), data.size()); ++i)
             {
-                joint_position_[i] = std::stod(data[i]);
+                joint_positions_[i] = std::stod(data[i]);
             }
 
 #ifdef DEBUG
             std::cout << "read positions:";
-            for (const auto& it : joint_position_)
+            for (const auto& it : joint_positions_)
             {
                 std::cout << it << ",";
             }
@@ -531,7 +421,7 @@ namespace whi_arm_hardware_interface
         params.insert(params.end(), { 0.0, 0.0, Duration, 0.0, 0.0 });
         requests.push_back(packData<double>("ServoJ", params));
 
-        auto feedbacks = ((DriverSocketFair*)drivers_map_[name_].get())->request(requests);
+        auto feedbacks = ((DriverSocketFair*)drivers_map_[hw_config_->hardware_].get())->request(requests);
         int index = -1, id = 0;
         std::vector<std::string> data;
         auto res = parseFeedback(feedbacks.front(), index, id, data);
@@ -544,7 +434,7 @@ namespace whi_arm_hardware_interface
         std::vector<int> paramsDo{ Addr, Level, 1 }; // 1: smooth
         requests.push_back(packData<int>("SetDO", paramsDo));
 
-        auto feedbacks = ((DriverSocketFair*)drivers_map_[name_].get())->request(requests);
+        auto feedbacks = ((DriverSocketFair*)drivers_map_[hw_config_->hardware_].get())->request(requests);
         int index = -1, id = 0;
         std::vector<std::string> data;
         auto res = parseFeedback(feedbacks.front(), index, id, data);
@@ -573,10 +463,10 @@ namespace whi_arm_hardware_interface
         root["relFlag"] = 1;
         requests.push_back(Json::writeString(builder, root));
 
-        auto res = ((DriverSocketFair*)drivers_map_[name_].get())->request(requests);
+        auto res = ((DriverSocketFair*)drivers_map_[hw_config_->hardware_].get())->request(requests);
         if (!res.empty())
         {
-            ROS_WARN_STREAM("failed to recover from protective state");
+            RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to recover from protective state");
         }
         return res.empty();
     }
@@ -585,42 +475,48 @@ namespace whi_arm_hardware_interface
     {
         // if (api_instance_->RobotEnable(0) != ERR_SUCCESS)
         // {
-        //     ROS_ERROR_STREAM("failed to enable robot. failed to initialize FAIR driver");
+        //    RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"),
+        //        "failed to enable robot. failed to initialize FAIR driver");
         //     return false;
         // }
         // std::this_thread::sleep_for(std::chrono::milliseconds(200));
         // if (api_instance_->Mode(0) != ERR_SUCCESS)
         // {
-        //     ROS_ERROR_STREAM("failed to set auto mode. failed to initialize FAIR driver");
+        //     RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"),
+        //         "failed to set auto mode. failed to initialize FAIR driver");
         //     return false;
         // }
-        // if (api_instance_->SetSpeed(int(velocity_scale_ * 100)) != ERR_SUCCESS)
+        // if (api_instance_->SetSpeed(int(hw_config_->velocity_scale_ * 100)) != ERR_SUCCESS)
         // {
-        //     ROS_ERROR_STREAM("failed to set velocity scale to " << velocity_scale_ << ". failed to initialize FAIR driver");
+        //     RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"),
+        //         "failed to set velocity scale to " << hw_config_->velocity_scale_ << ". failed to initialize FAIR driver");
         //     return false;
         // }
-        // if (api_instance_->SetLoadWeight(payload_weight_) != ERR_SUCCESS)
+        // if (api_instance_->SetLoadWeight(hw_config_->payload_weight_) != ERR_SUCCESS)
         // {
-        //     ROS_ERROR_STREAM("failed to set payload weight. failed to initialize FAIR driver");
+        //     RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"),
+        //         "failed to set payload weight. failed to initialize FAIR driver");
         //     return false;
         // }
         // whi_fair::DescTran centroid;
-        // centroid.x = payload_to_tcp_[0];
-        // centroid.y = payload_to_tcp_[1];
-        // centroid.z = payload_to_tcp_[2];
+        // centroid.x = hw_config_->payload_to_tcp_[0];
+        // centroid.y = hw_config_->payload_to_tcp_[1];
+        // centroid.z = hw_config_->payload_to_tcp_[2];
         // if (api_instance_->SetLoadCoord(&centroid) != ERR_SUCCESS)
         // {
-        //     ROS_ERROR_STREAM("failed to set payload coord. failed to initialize FAIR driver");
+        //     RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"),
+        //         "failed to set payload coord. failed to initialize FAIR driver");
         //     return false;
         // }
         // if (api_instance_->RobotEnable(1) != ERR_SUCCESS)
         // {
-        //     ROS_ERROR_STREAM("failed to enable robot. failed to initialize FAIR driver");
+        //     RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"),
+        //         "failed to enable robot. failed to initialize FAIR driver");
         //     return false;
         // }
         // std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-        // ROS_INFO_STREAM("FAIR driver is initialized successfully");
+        // RCLCPP_INFO_STREAM(rclcpp::get_logger("WhiArmInterface"), "FAIR driver is initialized successfully");
         return true;
     }
 
@@ -635,14 +531,14 @@ namespace whi_arm_hardware_interface
         whi_fair::JointPos jointPos;
 //         if (api_instance_->GetActualJointPosDegree(0, &jointPos) == ERR_SUCCESS)
 //         {
-//             for (std::size_t i = 0; i < std::min(joint_position_.size(), sizeof(jointPos.jPos)); ++i)
+//             for (std::size_t i = 0; i < std::min(joint_positions_.size(), sizeof(jointPos.jPos)); ++i)
 //             {
-//                 joint_position_[i] = angles::from_degrees(jointPos.jPos[i]);
+//                 joint_positions_[i] = angles::from_degrees(jointPos.jPos[i]);
 //             }
 
 // #ifdef DEBUG
 //             std::cout << "read positions:";
-//             for (const auto& it : joint_position_)
+//             for (const auto& it : joint_positions_)
 //             {
 //                 std::cout << it << ",";
 //             }
@@ -674,7 +570,7 @@ namespace whi_arm_hardware_interface
         // auto res = api_instance_->ServoJ(&positions, &extPositions, 0, 0, Duration, 0, 0);
         // if (res != ERR_SUCCESS)
         // {
-        //     ROS_WARN_STREAM("failed to execute ServoJ motion with error code: " << res);
+        //     RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to execute ServoJ motion with error code: " << res);
         // }
 
         // return res == ERR_SUCCESS;
@@ -702,50 +598,37 @@ namespace whi_arm_hardware_interface
         return false;
     }
 
-    void FairHardwareInterface::makeOffers()
-    {
-        // advertise arm ready service
-        server_ready_ = std::make_unique<ros::ServiceServer>(
-            node_handle_->advertiseService("arm_ready", &FairHardwareInterface::onServiceReady, this));            
-        // advertise io service
-        server_io_ = std::make_unique<ros::ServiceServer>(
-            node_handle_->advertiseService("arm_io", &FairHardwareInterface::onServiceIo, this));
-        // create state publisher
-        pub_motion_state_ = std::make_unique<ros::Publisher>(
-            node_handle_->advertise<whi_interfaces::WhiMotionState>("arm_motion_state", 1));
-    }
+    // bool FairHardwareInterface::onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response)
+    // {
+    //     return (Response.success = standby_);
+    // }
 
-    bool FairHardwareInterface::onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response)
-    {
-        return (Response.success = standby_);
-    }
+    // bool FairHardwareInterface::onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
+    //     whi_interfaces::WhiSrvIo::Response& Response)
+    // {
+    //     if (Request.addr < 1 || Request.addr > 7)
+    //     {
+    //         Response.result = false;
+    //     }
+    //     else
+    //     {
+    //         if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_READ)
+    //         {
+    //             Response.result = false;
+    //         }
+    //         else if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_WRITE)
+    //         {
+    //             if (hw_config_->hardware_ == hardware[API])
+    //             {
+    //                 Response.result = api_setIo(Request.addr, Request.level);
+    //             }
+    //             else if (hw_config_->hardware_ == hardware[SOCKET])
+    //             {
+    //                 Response.result = tcp_setIo(Request.addr, Request.level);
+    //             }
+    //         }
+    //     }
 
-    bool FairHardwareInterface::onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
-        whi_interfaces::WhiSrvIo::Response& Response)
-    {
-        if (Request.addr < 1 || Request.addr > 7)
-        {
-            Response.result = false;
-        }
-        else
-        {
-            if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_READ)
-            {
-                Response.result = false;
-            }
-            else if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_WRITE)
-            {
-                if (name_ == hardware[API])
-                {
-                    Response.result = api_setIo(Request.addr, Request.level);
-                }
-                else if (name_ == hardware[SOCKET])
-                {
-                    Response.result = tcp_setIo(Request.addr, Request.level);
-                }
-            }
-        }
-
-        return Response.result;
-    }
+    //     return Response.result;
+    // }
 }

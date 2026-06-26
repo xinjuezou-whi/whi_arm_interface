@@ -3,7 +3,7 @@ whi_arm_interface:
   shutdown_patience: 5000 #ms
   hardware: 'socket'
   forward_dirs: [-1, -1, -1, -1, -1, -1]
-  speed_rate: 100
+  speed_rate: 1.0
   angular_velocities: [90, 90, 90, 90, 90, 90]
   angular_accelerations: [180, 180, 180, 180, 180, 180]
   socket:

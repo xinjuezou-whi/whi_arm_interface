@@ -1,5 +1,5 @@
 /******************************************************************
-arm hardware interface of JAKA under ROS 1
+arm hardware interface of JAKA under ROS 2
 it is a hardware resouces layer for ros_controller
 
 Features:
@@ -16,34 +16,36 @@ All text above must be included in any redistribution.
 #include "whi_arm_interface/driver_socket_json.h"
 #include "whi_arm_interface/jakaAPI/jkerr.h"
 #include "whi_arm_interface/jakaAPI/jktypes.h"
-#include "whi_interfaces/WhiMotionState.h"
+#include "whi_interfaces/msg/whi_motion_state.hpp"
+#include "whi_arm_interface/hw_config_jaka.h"
 #include <json/json.h>
+
+#include <rclcpp/rclcpp.hpp>
 #include <angles/angles.h>
-#include <trajectory_msgs/JointTrajectory.h>
-#include <controller_manager_msgs/ListControllers.h>
+// #include <trajectory_msgs/JointTrajectory.h> // TODO
+// #include <controller_manager_msgs/srv/list_controllers.hpp> // TODO
 
 #include <thread>
 
 namespace whi_arm_hardware_interface
 {
-    using namespace hardware_interface;
-
-    JakaHardwareInterface::JakaHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle)
-        : ArmHardware(NodeHandle)
+    JakaHardwareInterface::JakaHardwareInterface(const std::string& Config, rclcpp::Node::SharedPtr Node)
+        : ArmHardware(Config, Node)
     {
+        parseConfig(Config);
         init();
     }
 
     void JakaHardwareInterface::quit()
     {
         // give time to thirdparty dependencies
-        std::this_thread::sleep_for(std::chrono::milliseconds(shutdown_patience_));
+        std::this_thread::sleep_for(std::chrono::milliseconds(hw_config_->shutdown_patience_));
 
-        if (name_ == hardware[API])
+        if (hw_config_->hardware_ == hardware[API])
         {
             api_close();
         }
-        else if (name_ == hardware[SOCKET])
+        else if (hw_config_->hardware_ == hardware[SOCKET])
         {
             tcp_close();
         }
@@ -64,126 +66,37 @@ namespace whi_arm_hardware_interface
 
     void JakaHardwareInterface::init()
     {
-        // general params
-        node_handle_->param("shutdown_patience", shutdown_patience_, 0);
-
-        // joints
-        node_handle_->getParam("joints", joint_names_);
-        if (joint_names_.size() == 0)
-        {
-            // especially for rosrun mode
-            std::string sum;
-            for (int i = 0; i < 6; ++i)
-            {
-                joint_names_.push_back("joint" + std::to_string(i + 1));
-                sum += joint_names_.back() + "\n";
-            }
-            sum.pop_back();
-            ROS_WARN((std::string("No joints found on parameter server for controller. Name them with:\n") + sum).c_str());
-        }
-
         // drivers
-        node_handle_->param("startup_duration", startup_duration_, 10);
-        node_handle_->param("velocity_scale", velocity_scale_, 1.0);
-        node_handle_->param("payload_weight", payload_weight_, 0.0);
-        if (node_handle_->getParam("payload_to_tcp", payload_to_tcp_))
+        if (hw_config_->payload_to_tcp_.empty())
         {
-            for (auto& it : payload_to_tcp_)
-            {
-                it *= 1000.0; // JAKA requires mm
-            }
+            hw_config_->payload_to_tcp_.resize(3);
         }
         else
         {
-            payload_to_tcp_.resize(3);
+            // JAKA requires mm
+            for (auto& it : hw_config_->payload_to_tcp_)
+            {
+                it *= 1000.0;
+            }
         }
-        node_handle_->param("socket/addr", addr_, std::string("10.5.5.1"));
-        node_handle_->param("hardware", name_, std::string(hardware[SOCKET]));
-        node_handle_->param("loop_hz", loop_hz_, 10.0);
+
         initializing();
-
-        // resize vectors
-        num_joints_ = joint_names_.size();
-        joint_position_.resize(num_joints_);
-        joint_velocity_.resize(num_joints_);
-        joint_effort_.resize(num_joints_);
-        joint_position_command_.resize(num_joints_);
-        joint_velocity_command_.resize(num_joints_);
-        joint_acceleration_command_.resize(num_joints_);
-        joint_effort_command_.resize(num_joints_);
-
-        // initialize controller
-        for (std::size_t i = 0; i < num_joints_; ++i)
-        {
-            // create joint state interface
-            JointStateHandle jointStateHandle(joint_names_[i], &joint_position_[i], &joint_velocity_[i], &joint_effort_[i]);
-            joint_state_interface_.registerHandle(jointStateHandle);
-
-            // create joint command interface: position
-            JointHandle jointPositionHandle(jointStateHandle, &joint_position_command_[i]);
-            position_joint_interface_.registerHandle(jointPositionHandle);
-            scaled_controllers::ScaledJointHandle scaledPosJointHandle(jointStateHandle, &joint_position_command_[i], &velocity_scale_);
-            scaled_position_joint_interface_.registerHandle(scaledPosJointHandle);
-
-            // create joint command interface: position, velocity
-            PosVelJointHandle jointPosVelHandle(jointStateHandle,
-                &joint_position_command_[i], &joint_velocity_command_[i]);
-            pos_vel_joint_interface_.registerHandle(jointPosVelHandle);               
-
-            // create joint command interface: position, velocity, acceleration
-            PosVelAccJointHandle jointPosVelAccHandle(jointStateHandle,
-                &joint_position_command_[i], &joint_velocity_command_[i], &joint_acceleration_command_[i]);
-            pos_vel_acc_joint_interface_.registerHandle(jointPosVelAccHandle);
-
-            // create joint command interface: velocity
-            JointHandle jointVelocityHandle(jointStateHandle, &joint_velocity_command_[i]);
-            velocity_joint_interface_.registerHandle(jointVelocityHandle);
-            scaled_controllers::ScaledJointHandle scaledVelJointHandle(jointStateHandle, &joint_velocity_command_[i], &velocity_scale_);
-            scaled_velocity_joint_interface_.registerHandle(scaledVelJointHandle);
-        }
-        registerInterface(&joint_state_interface_);
-        registerInterface(&position_joint_interface_);
-        registerInterface(&scaled_position_joint_interface_);
-        registerInterface(&pos_vel_joint_interface_);
-        registerInterface(&pos_vel_acc_joint_interface_);
-        registerInterface(&velocity_joint_interface_);
-        registerInterface(&scaled_velocity_joint_interface_);
-
-        // controller
-        controller_manager_ = std::make_unique<controller_manager::ControllerManager>(this, *node_handle_);
-        client_controller_manager_ = std::make_unique<ros::ServiceClient>(
-            node_handle_->serviceClient<controller_manager_msgs::ListControllers>("controller_manager/list_controllers"));
-
-        ros::Duration updateFreq = ros::Duration(1.0 / loop_hz_);
-        non_realtime_loop_ = std::make_unique<ros::Timer>(node_handle_->createTimer(
-            updateFreq, std::bind(&JakaHardwareInterface::update, this, std::placeholders::_1)));
     }
 
-    void JakaHardwareInterface::update(const ros::TimerEvent& Event)
-    {
-        elapsed_time_ = ros::Duration(Event.current_real - Event.last_real);
-        read();
-        controller_manager_->update(ros::Time::now(), elapsed_time_);
-        if (!is_protective_)
-        {
-            write(elapsed_time_);
-        }
-    }
-
-    void JakaHardwareInterface::read()
+    void JakaHardwareInterface::read(WhiArmInterface* HwIf, double Dt)
     {
         if (initialized_)
         {
             static bool first = true;
 
             bool res = true;
-            if (name_ == hardware[API])
+            if (hw_config_->hardware_ == hardware[API])
             {
                 res = api_read();
                 // only get_robot_status is multi-thread safe, therefore taking synchronous mech
                 is_protective_ = api_isProtective();
             }
-            else if (name_ == hardware[SOCKET])
+            else if (hw_config_->hardware_ == hardware[SOCKET])
             {
                 res = tcp_read();
                 is_protective_ = tcp_isProtective();
@@ -191,141 +104,108 @@ namespace whi_arm_hardware_interface
 
             if (first && res)
             {
-                joint_position_command_ = joint_position_;
+                joint_position_commands_ = joint_positions_;
                 first = false;
                 standby_ = true;
             }
 
             if (is_protective_)
             {
-                // get the controller name through service
-                std::string controllerName("controllers/scaled_pos_controller");
-                controller_manager_msgs::ListControllers srv;
-                if (client_controller_manager_->call(srv))
-                {
-                    for (const auto& it : srv.response.controller)
-                    {
-                        if (it.state == "running" && !it.claimed_resources.front().resources.empty())
-                        {
-                            controllerName.assign(it.name);
-                        }
-                    }
-                }
-                // abort the goal with preemption policy
-                auto pub_preempt = std::make_unique<ros::Publisher>(
-                    node_handle_->advertise<trajectory_msgs::JointTrajectory>(controllerName + "/command", 1));
-                trajectory_msgs::JointTrajectory preempt;
-                pub_preempt->publish(preempt);
+                trajectory_action_client_->async_cancel_all_goals();
 
-                whi_interfaces::WhiMotionState msg;
-                msg.state = whi_interfaces::WhiMotionState::STA_FAULT;
-                if (pub_motion_state_)
-                {
-                    pub_motion_state_->publish(msg);
-                }
-                ROS_ERROR_STREAM("arm entered protective state");
+                publishState(whi_interfaces::msg::WhiState::WARN, "state", "protective stopped");
+                RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                    "arm entered protective state"
+                    << "\033[0m");
 
-                if (name_ == hardware[API])
+                if (hw_config_->hardware_ == hardware[API])
                 {
                     api_protectiveRecover();
                 }
-                else if (name_ == hardware[SOCKET])
+                else if (hw_config_->hardware_ == hardware[SOCKET])
                 {
                     tcp_protectiveRecover();
                 }
             }
             else
             {
-                whi_interfaces::WhiMotionState msg;
-                msg.state = whi_interfaces::WhiMotionState::STA_STANDBY;
-                if (pub_motion_state_)
-                {
-                    pub_motion_state_->publish(msg);
-                }
+                publishState(whi_interfaces::msg::WhiState::INFO, "state", "standby");
             }
         }
     }
 
-    void JakaHardwareInterface::write(ros::Duration ElapsedTime)
+    void JakaHardwareInterface::write(WhiArmInterface* HwIf, double Dt)
     {
         if (standby_)
         {
-            if (name_ == hardware[API])
+            if (hw_config_->hardware_ == hardware[API])
             {
-                api_servoPositions(joint_position_command_, ElapsedTime.toSec());
+                api_servoPositions(joint_position_commands_, Dt);
             }
-            else if (name_ == hardware[SOCKET])
+            else if (hw_config_->hardware_ == hardware[SOCKET])
             {
-                tcp_servoPositions(joint_position_command_, ElapsedTime.toSec());
+                tcp_servoPositions(joint_position_commands_, Dt);
             }
         }
     }
 
     void JakaHardwareInterface::initializing()
     {
-        while (!ping(addr_))
+        auto addr = hw_config_->hardware_ == hardware[API] ? hw_config_->api_addr_ : hw_config_->socket_addr_;
+        while (!ping(addr))
         {
-            ROS_WARN_STREAM("failed to ping:" << addr_ << ", attempt to another try in " << startup_duration_ << " seconds");
-            std::this_thread::sleep_for(std::chrono::seconds(startup_duration_));
+            RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to ping:" << addr << ", attempt to another try in " << hw_config_->startup_duration_ << " seconds");
+            std::this_thread::sleep_for(std::chrono::duration<double>(hw_config_->startup_duration_));
         }
-
-        node_handle_->param("lpf", lpf_, 0.5);
         
         bool res = false;
         while (!res)
         {
-            if (name_ == hardware[API])
+            if (hw_config_->hardware_ == hardware[API])
             {
                 if (!api_instance_)
                 {
                     api_instance_ = std::make_unique<JAKAZuRobot>();
                 }
-                res = (api_instance_->login_in(addr_.c_str()) == ERR_SUCC);
+                res = (api_instance_->login_in(addr.c_str()) == ERR_SUCC);
             }
-            else if (name_ == hardware[SOCKET])
+            else if (hw_config_->hardware_ == hardware[SOCKET])
             {
-                drivers_map_[name_] = std::make_unique<DriverSocketJson>(name_, addr_, 10001);
-                bool printTcpFeedback;
-                node_handle_->param("debug/print_tcp_feedback", printTcpFeedback, false);
-                drivers_map_[name_]->set_debug_params(std::map<std::string, bool>
-                    {{ "print_tcp_feedback", printTcpFeedback }});
-                ((DriverSocketJson*)drivers_map_[name_].get())->setParamsKey(paramKey, PARAM_KEY_SUM);
+                drivers_map_[hw_config_->hardware_] = std::make_unique<DriverSocketJson>(hw_config_->hardware_, addr, 10001);
+                drivers_map_[hw_config_->hardware_]->set_debug_params(
+                    std::map<std::string, bool>{{ "print_tcp_feedback", hw_config_->debug_print_tcp_feedback_ }});
+                ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->setParamsKey(paramKey, PARAM_KEY_SUM);
                 res = tcp_state();
                 if (!res)
                 {
                     tcp_close();
-                    drivers_map_[name_]->close();
+                    drivers_map_[hw_config_->hardware_]->close();
                 }
             }
 
             if (!res)
             {
-                ROS_WARN_STREAM("failed to setup connection, attempt to another try in " << startup_duration_ << " seconds");
-                std::this_thread::sleep_for(std::chrono::seconds(startup_duration_));
+                RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to setup connection, attempt to another try in " << hw_config_->startup_duration_ << " seconds");
+                std::this_thread::sleep_for(std::chrono::duration<double>(hw_config_->startup_duration_));
             }
         }
 
         while (!initialized_)
         {
-            if (name_ == hardware[API])
+            if (hw_config_->hardware_ == hardware[API])
             {
-                initialized_ = api_init(addr_);
+                initialized_ = api_init(addr);
             }
-            else if (name_ == hardware[SOCKET])
+            else if (hw_config_->hardware_ == hardware[SOCKET])
             {
                 initialized_ = tcp_init();
             }
 
             if (!initialized_)
             {
-                ROS_WARN_STREAM("failed to initialize, attempt to another try in " << startup_duration_ << " seconds");
-                std::this_thread::sleep_for(std::chrono::seconds(startup_duration_));
+                RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to initialize, attempt to another try in " << hw_config_->startup_duration_ << " seconds");
+                std::this_thread::sleep_for(std::chrono::duration<double>(hw_config_->startup_duration_));
             }
-        }
-
-        if (initialized_)
-        {
-            makeOffers();
         }
     }
 
@@ -345,16 +225,16 @@ namespace whi_arm_hardware_interface
         // {"cmdName":"set_servo_move_filter","filter_type":1,"lpf_cf":0.5}
         root["cmdName"] = "set_servo_move_filter";
         root["filter_type"] = 1;
-        root["lpf_cf"] = lpf_;
+        root["lpf_cf"] = hw_config_->lpf_;
         requests.push_back(Json::writeString(builder, root));
         // {"cmdName":"rapid_rate","rate_value":1.0}
         root["cmdName"] = "rapid_rate";
-        root["rate_value"] = velocity_scale_;
+        root["rate_value"] = hw_config_->velocity_scale_;
         requests.push_back(Json::writeString(builder, root));
         // {"cmdName":"set_tool_payload","mass":weight,"centroid":[x,y,z]}
         root["cmdName"] = "set_tool_payload";
-        root["mass"] = payload_weight_;
-        for (const auto& it : payload_to_tcp_)
+        root["mass"] = hw_config_->payload_weight_;
+        for (const auto& it : hw_config_->payload_to_tcp_)
         {
             root["centroid"].append(it);
         }
@@ -376,7 +256,7 @@ namespace whi_arm_hardware_interface
         // delay 500ms
         requests.push_back("delay:500");
 
-        return ((DriverSocketJson*)drivers_map_[name_].get())->request(requests).empty();
+        return ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->request(requests).empty();
     }
 
     bool JakaHardwareInterface::tcp_close()
@@ -397,7 +277,7 @@ namespace whi_arm_hardware_interface
         root["cmdName"] = "power_off";
         requests.push_back(Json::writeString(builder, root));
 
-        return ((DriverSocketJson*)drivers_map_[name_].get())->request(requests).empty();
+        return ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->request(requests).empty();
     }
 
     bool JakaHardwareInterface::tcp_state()
@@ -411,7 +291,7 @@ namespace whi_arm_hardware_interface
         root["cmdName"] = "get_robot_state";
         requests.push_back(Json::writeString(builder, root));
 
-        return ((DriverSocketJson*)drivers_map_[name_].get())->request(requests).empty();
+        return ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->request(requests).empty();
     }
 
     bool JakaHardwareInterface::tcp_read()
@@ -425,18 +305,18 @@ namespace whi_arm_hardware_interface
         root["cmdName"] = "get_joint_pos";
         requests.push_back(Json::writeString(builder, root));
 
-        ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
-        auto read = ((DriverSocketJson*)drivers_map_[name_].get())->readParam(paramKey[JOINT_POS]);
+        ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->request(requests);
+        auto read = ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->readParam(paramKey[JOINT_POS]);
         if (!read.empty())
         {
-            for (std::size_t i = 0; i < std::min(joint_position_.size(), read.size()); ++i)
+            for (std::size_t i = 0; i < std::min(joint_positions_.size(), read.size()); ++i)
             {
-                joint_position_[i] = angles::from_degrees(read[i]);
+                joint_positions_[i] = angles::from_degrees(read[i]);
             }
 
 #ifdef DEBUG
             std::cout << "read positions:";
-            for (const auto& it : joint_position_)
+            for (const auto& it : joint_positions_)
             {
                 std::cout << it << ",";
             }
@@ -480,10 +360,10 @@ namespace whi_arm_hardware_interface
         root["stepNum"] = stepNum;
         requests.push_back(Json::writeString(builder, root));
 
-        auto res = ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        auto res = ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->request(requests);
         if (!res.empty())
         {
-            ROS_WARN_STREAM("failed to execute servo_j motion");
+            RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to execute servo_j motion");
         }
         return res.empty();
     }
@@ -503,10 +383,10 @@ namespace whi_arm_hardware_interface
         root["value"] = Level;
         requests.push_back(Json::writeString(builder, root));
 
-        auto res = ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        auto res = ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->request(requests);
         if (!res.empty())
         {
-            ROS_WARN_STREAM("failed to execute set digital output");
+            RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to execute set digital output");
         }
         return res.empty();
     }
@@ -523,9 +403,9 @@ namespace whi_arm_hardware_interface
         root["cmdName"] = "protective_stop_status";
         requests.push_back(Json::writeString(builder, root));
 
-        if (((DriverSocketJson*)drivers_map_[name_].get())->request(requests).empty())
+        if (((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->request(requests).empty())
         {
-            auto read = ((DriverSocketJson*)drivers_map_[name_].get())->readParamStr(paramKey[PROTECTIVE_STOP]);
+            auto read = ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->readParamStr(paramKey[PROTECTIVE_STOP]);
             if (read.empty())
             {
                 return false;
@@ -537,7 +417,7 @@ namespace whi_arm_hardware_interface
         }
         else
         {
-            ROS_WARN_STREAM("failed to requiry protective state");
+            RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to requiry protective state");
             return false;
         }
     }
@@ -558,10 +438,10 @@ namespace whi_arm_hardware_interface
         root["relFlag"] = 1;
         requests.push_back(Json::writeString(builder, root));
 
-        auto res = ((DriverSocketJson*)drivers_map_[name_].get())->request(requests);
+        auto res = ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->request(requests);
         if (!res.empty())
         {
-            ROS_WARN_STREAM("failed to recover from protective state");
+            RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to recover from protective state");
         }
         return res.empty();
     }
@@ -572,53 +452,69 @@ namespace whi_arm_hardware_interface
 
         if (api_instance_->login_in(Addr.c_str()) != ERR_SUCC)
         {
-            ROS_ERROR_STREAM("failed to login JAKA driver. failed to initialize JAKA driver");
+            RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                "failed to login JAKA driver. failed to initialize JAKA driver"
+                << "\033[0m");
             api_instance_ = nullptr;
             return false;
         }
         if (api_instance_->servo_move_enable(false) != ERR_SUCC)
         {
-            ROS_ERROR_STREAM("failed to disable servo mode. failed to initialize JAKA driver");
+            RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                "failed to disable servo mode. failed to initialize JAKA driver"
+                << "\033[0m");
             return false;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        if (api_instance_->servo_move_use_joint_LPF(lpf_) != ERR_SUCC)
+        if (api_instance_->servo_move_use_joint_LPF(hw_config_->lpf_) != ERR_SUCC)
         {
-            ROS_ERROR_STREAM("failed to set LPF to " << lpf_ << " Hz. failed to initialize JAKA driver");
+            RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                "failed to set LPF to " << hw_config_->lpf_ << " Hz. failed to initialize JAKA driver"
+                << "\033[0m");
             return false;
         }
-        if (api_instance_->set_rapidrate(velocity_scale_) != ERR_SUCC)
+        if (api_instance_->set_rapidrate(hw_config_->velocity_scale_) != ERR_SUCC)
         {
-            ROS_ERROR_STREAM("failed to set velocity scale to " << velocity_scale_ << ". failed to initialize JAKA driver");
+            RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                "failed to set velocity scale to " << hw_config_->velocity_scale_ << ". failed to initialize JAKA driver"
+                << "\033[0m");
             return false;
         }
         PayLoad payload;
-        payload.mass = payload_weight_;
-        payload.centroid.x = payload_to_tcp_[0];
-        payload.centroid.y = payload_to_tcp_[1];
-        payload.centroid.z = payload_to_tcp_[2];
+        payload.mass = hw_config_->payload_weight_;
+        payload.centroid.x = hw_config_->payload_to_tcp_[0];
+        payload.centroid.y = hw_config_->payload_to_tcp_[1];
+        payload.centroid.z = hw_config_->payload_to_tcp_[2];
         if (api_instance_->set_payload(&payload) != ERR_SUCC)
         {
-            ROS_ERROR_STREAM("failed to set payload. failed to initialize JAKA driver");
+            RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                "failed to set payload. failed to initialize JAKA driver"
+                << "\033[0m");
             return false;
         }
         if (api_instance_->power_on() != ERR_SUCC)
         {
-            ROS_ERROR_STREAM("failed to power on arm. failed to initialize JAKA driver");
+            RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                "failed to power on arm. failed to initialize JAKA driver"
+                << "\033[0m");
             return false;
         }
         if (api_instance_->enable_robot() != ERR_SUCC)
         {
-            ROS_ERROR_STREAM("failed to enable arm. failed to initialize JAKA driver");
+            RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                "failed to enable arm. failed to initialize JAKA driver"
+                << "\033[0m");
             return false;
         }
         if (api_instance_->servo_move_enable(true) != ERR_SUCC)
         {
-            ROS_ERROR_STREAM("failed to enable servo mode. failed to initialize JAKA driver");
+            RCLCPP_ERROR_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                "failed to enable servo mode. failed to initialize JAKA driver"
+                << "\033[0m");
             return false;
         }
 
-        ROS_INFO_STREAM("JAKA driver is initialized successfully");
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("WhiArmInterface"), "JAKA driver is initialized successfully");
         return true;
     }
 
@@ -635,14 +531,14 @@ namespace whi_arm_hardware_interface
         JointValue jointPos;
         if (api_instance_->get_joint_position(&jointPos) == ERR_SUCC)
         {
-            for (std::size_t i = 0; i < std::min(joint_position_.size(), sizeof(jointPos.jVal)); ++i)
+            for (std::size_t i = 0; i < std::min(joint_positions_.size(), sizeof(jointPos.jVal)); ++i)
             {
-                joint_position_[i] = jointPos.jVal[i];
+                joint_positions_[i] = jointPos.jVal[i];
             }
 
 #ifdef DEBUG
             std::cout << "read positions:";
-            for (const auto& it : joint_position_)
+            for (const auto& it : joint_positions_)
             {
                 std::cout << it << ",";
             }
@@ -678,7 +574,7 @@ namespace whi_arm_hardware_interface
         auto res = api_instance_->servo_j(&positions, MoveMode::ABS, stepNum);
         if (res != ERR_SUCC)
         {
-            ROS_WARN_STREAM("failed to execute servo_j motion with error code: " << res);
+            RCLCPP_WARN_STREAM(rclcpp::get_logger("WhiArmInterface"), "failed to execute servo_j motion with error code: " << res);
         }
 
         return res == ERR_SUCC;
@@ -703,50 +599,37 @@ namespace whi_arm_hardware_interface
             api_instance_->servo_move_enable(true) == ERR_SUCC;
     }
 
-    void JakaHardwareInterface::makeOffers()
-    {
-        // advertise arm ready service
-        server_ready_ = std::make_unique<ros::ServiceServer>(
-            node_handle_->advertiseService("arm_ready", &JakaHardwareInterface::onServiceReady, this));            
-        // advertise io service
-        server_io_ = std::make_unique<ros::ServiceServer>(
-            node_handle_->advertiseService("arm_io", &JakaHardwareInterface::onServiceIo, this));
-        // create state publisher
-        pub_motion_state_ = std::make_unique<ros::Publisher>(
-            node_handle_->advertise<whi_interfaces::WhiMotionState>("arm_motion_state", 1));
-    }
+    // bool JakaHardwareInterface::onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response)
+    // {
+    //     return (Response.success = standby_);
+    // }
 
-    bool JakaHardwareInterface::onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response)
-    {
-        return (Response.success = standby_);
-    }
+    // bool JakaHardwareInterface::onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
+    //     whi_interfaces::WhiSrvIo::Response& Response)
+    // {
+    //     if (Request.addr < 1 || Request.addr > 7)
+    //     {
+    //         Response.result = false;
+    //     }
+    //     else
+    //     {
+    //         if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_READ)
+    //         {
+    //             Response.result = false;
+    //         }
+    //         else if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_WRITE)
+    //         {
+    //             if (hw_config_->hardware_ == hardware[API])
+    //             {
+    //                 Response.result = api_setIo(Request.addr, Request.level);
+    //             }
+    //             else if (hw_config_->hardware_ == hardware[SOCKET])
+    //             {
+    //                 Response.result = tcp_setIo(Request.addr, Request.level);
+    //             }
+    //         }
+    //     }
 
-    bool JakaHardwareInterface::onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
-        whi_interfaces::WhiSrvIo::Response& Response)
-    {
-        if (Request.addr < 1 || Request.addr > 7)
-        {
-            Response.result = false;
-        }
-        else
-        {
-            if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_READ)
-            {
-                Response.result = false;
-            }
-            else if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_WRITE)
-            {
-                if (name_ == hardware[API])
-                {
-                    Response.result = api_setIo(Request.addr, Request.level);
-                }
-                else if (name_ == hardware[SOCKET])
-                {
-                    Response.result = tcp_setIo(Request.addr, Request.level);
-                }
-            }
-        }
-
-        return Response.result;
-    }
+    //     return Response.result;
+    // }
 }

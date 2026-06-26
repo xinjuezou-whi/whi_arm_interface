@@ -137,7 +137,7 @@ void DriverSocket::request(const std::vector<std::string>& Params)
 		}
 		else
 		{
-			ROS_ERROR_STREAM("failed to send command " << it);
+			std::cout << "\033[1;31" << "failed to send command " << it << "\033[0m" << std::endl;
 		}
 	}
 }
@@ -196,7 +196,7 @@ bool DriverSocket::sendCommand(const std::string& Command)
 	}
 	else
 	{
-		ROS_FATAL_STREAM("failed to open socket " << addr_ << ":" << port_);
+		std::cout << "\033[1;31" << "failed to open socket " << addr_ << ":" << port_ << "\033[0m" << std::endl;
 		return false;
 	}
 }
@@ -214,7 +214,7 @@ std::vector<std::string> DriverSocket::readFeedback()
 	}
 	else
 	{
-		ROS_FATAL_STREAM("failed to open socket " << addr_ << ":" << port_);
+		std::cout << "\033[1;31" << "failed to open socket " << addr_ << ":" << port_ << "\033[0m" << std::endl;
 	}
 
 	return std::vector<std::string>();

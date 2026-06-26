@@ -2,8 +2,8 @@ whi_arm_interface:
   loop_hz: 20 # hz
   shutdown_patience: 5000 #ms
   steps_per_degree: [44.705882, 110.60606, 56.071429, 46.060606, 21.785714, 42.741936]
-  forward_dir: [1, 1, 1, -1, 1, 1]
-  limits_dir: [-1, -1, 1, 1, -1, 1]
+  forward_dirs: [1, 1, 1, -1, 1, 1]
+  limits_dirs: [-1, -1, 1, 1, -1, 1]
   home_offsets: [160, 41, -149, 78.5, 91.5, -163]
   home_kinematics: [50, 5, 25, 5, 25] # order speed_rate-acc_dur-acc_rate-dcc_dur-dcc_rate
   speed_rate: 30
@@ -13,10 +13,7 @@ whi_arm_interface:
   dec_rate: 5
   home_poweron: true
   control_mode: close # open
-  hardware: 'rosserial'
-  rosserial:
-    topic: '/arm_hardware_interface'
+  hardware: serial # micro_ros
   serial:
     port: '/dev/ttyACM0'
     baudrate: 115200
-

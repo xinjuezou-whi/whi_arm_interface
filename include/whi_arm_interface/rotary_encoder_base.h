@@ -18,13 +18,6 @@ Changelog:
 #include <string>
 #include <atomic>
 
-#define ROS_1 1
-#define ROS_2 0
-#if ROS_1
-#include <ros/ros.h>
-#elif ROS_2
-#endif
-
 class RotaryEncoderBase
 {
 public:

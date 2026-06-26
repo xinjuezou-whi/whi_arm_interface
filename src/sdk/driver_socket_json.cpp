@@ -109,7 +109,7 @@ std::vector<int> DriverSocketJson::request(const std::vector<std::string>& Param
 			else
 			{
 				res.push_back(i);
-				ROS_ERROR_STREAM("failed to send command " << Params[i]);
+				std::cout << "\033[1;31" << "failed to send command " << Params[i] << "\033[0m" << std::endl;
 			}
 		}
 	}
@@ -135,7 +135,7 @@ bool DriverSocketJson::sendCommand(const std::string& Command)
 	}
 	else
 	{
-		ROS_FATAL_STREAM("failed to open socket " << addr_  << ":" << port_);
+		std::cout << "\033[1;31" << "failed to open socket " << addr_ << ":" << port_ << "\033[0m" << std::endl;
 		return false;
 	}
 }
@@ -230,7 +230,7 @@ std::string DriverSocketJson::readFeedback()
 	}
 	else
 	{
-		ROS_FATAL_STREAM("failed to open socket " << addr_  << ":" << port_);
+		std::cout << "\033[1;31" << "failed to open socket " << addr_ << ":" << port_ << "\033[0m" << std::endl;
 	}
 
 	return std::string();

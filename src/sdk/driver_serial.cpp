@@ -16,6 +16,8 @@ All text above must be included in any redistribution.
 ******************************************************************/
 #include "whi_arm_interface/driver_serial.h"
 
+#include <functional>
+
 DriverSerial::DriverSerial(const std::string& JointName, const char* Device, unsigned int Baudrate/* = 9600*/)
 	: DriverBase(JointName)
 	, serial_port_(Device), baudrate_(Baudrate)
@@ -27,7 +29,7 @@ DriverSerial::DriverSerial(const std::string& JointName, const char* Device, uns
 	}
 	catch (serial::IOException& e)
 	{
-		ROS_FATAL_STREAM("failed to open serial " << serial_port_);
+		std::cout << "\033[1;31" << "failed to open serial " << serial_port_ << "\033[0m" << std::endl;
 	}
 }
 

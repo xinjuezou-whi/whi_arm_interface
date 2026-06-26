@@ -1,5 +1,5 @@
 /******************************************************************
-arm hardware interface of JAKA under ROS 1
+arm hardware interface of JAKA under ROS 2
 it is a hardware resouces layer for ros_controller
 
 Features:
@@ -17,16 +17,21 @@ All text above must be included in any redistribution.
 
 Changelog:
 2024-09-03: Initial version
-2024-xx-xx: xxx
+2026-06-25：Migrate to ROS 2
+2026-xx-xx: xxx
 ******************************************************************/
 #pragma once
-#include "whi_arm_hardware_base.h"
-#include "whi_interfaces/WhiSrvIo.h"
-#include <std_srvs/Trigger.h>
+#include "arm_hardware_base.h"
+#include "whi_interfaces/srv/whi_srv_io.hpp"
 #include "jakaAPI/JAKAZuRobot.h"
+
+#include <std_srvs/srv/trigger.hpp>
 
 namespace whi_arm_hardware_interface
 {
+    // forward declaration
+    class HwConfig;
+
     class JakaHardwareInterface : public ArmHardware
     {
     protected:
@@ -34,17 +39,17 @@ namespace whi_arm_hardware_interface
         static constexpr const char* paramKey[PARAM_KEY_SUM] = { "joint_pos", "protective_stop", "enable", "power", "in_servomove" };
 
     public:
-        JakaHardwareInterface(std::shared_ptr<ros::NodeHandle>& NodeHandle);
+        JakaHardwareInterface(const std::string& Config, rclcpp::Node::SharedPtr Node);
         virtual ~JakaHardwareInterface();
 
     public:
+        void read(WhiArmInterface* HwIf, double Dt) override;
+        void write(WhiArmInterface* HwIf, double Dt) override;
         void quit() override;
 
     protected:
         void init();
-        void update(const ros::TimerEvent& Event);
-        void read();
-        void write(ros::Duration ElapsedTime);
+        bool parseConfig(const std::string& Config) override;
         void initializing();
         // TCP protocol related
         bool tcp_init();
@@ -63,21 +68,14 @@ namespace whi_arm_hardware_interface
         bool api_setIo(int Addr, int Level);
         bool api_isProtective();
         bool api_protectiveRecover();
-        void makeOffers();
-        bool onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response);
-        bool onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
-            whi_interfaces::WhiSrvIo::Response& Response);
 
     protected:
         enum HomingState { STA_TO_HOME = 0, STA_HOMING, STA_HOMED };
 
     protected:
-        std::string name_{ "socket" };
+        std::shared_ptr<HwConfig> hw_config_{ nullptr };
         std::string controller_type_{ "position" };
-        std::string addr_{ "10.5.5.1" };
         std::unique_ptr<JAKAZuRobot> api_instance_{ nullptr };
-        double velocity_scale_{ 1.0 };
-        double payload_weight_{ 0.0 };
         std::vector<double> payload_to_tcp_;
         bool standby_{ false };
         bool is_protective_{ false };
