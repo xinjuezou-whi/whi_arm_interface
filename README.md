@@ -5,10 +5,10 @@ arm hardware interface
 ## Supported arms
 | Brand   | Seriels | Test     |
 |---------|---------|----------|
-| AR      | ar3     | Passed   |
-| Chin    | All     | Passed   |
+| AR      | ar3     | not yet  |
+| Chin    | All     | not yet  |
 | JAKA    | All     | Passed   |
-| Fairino | All     | Passed   |
+| Fairino | All     | not yet  |
 
 ## Dependency
 
