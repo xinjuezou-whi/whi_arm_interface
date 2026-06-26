@@ -34,7 +34,7 @@ namespace whi_arm_hardware_interface
     {
         for (int i = 0; i < 3; ++i)
 		{
-			((DriverSocket*)drivers_map_[name_].get())->sendCommand("SHUT");
+			((DriverSocket*)drivers_map_[hw_config_->hardware_].get())->sendCommand("SHUT");
 			usleep(200000);
 		}
     }
@@ -50,9 +50,9 @@ namespace whi_arm_hardware_interface
         // drivers
         if (hw_config_->hardware_ == hardware[SOCKET])
         {
-            drivers_map_.emplace(name_, std::make_unique<DriverSocket>(name_,
+            drivers_map_.emplace(hw_config_->hardware_, std::make_unique<DriverSocket>(hw_config_->hardware_,
                 hw_config_->socket_addr_, hw_config_->socket_port_));
-            ((DriverSocket*)drivers_map_[name_].get())->setMotor();
+            ((DriverSocket*)drivers_map_[hw_config_->hardware_].get())->setMotor();
         }
         else
         {
@@ -71,17 +71,17 @@ namespace whi_arm_hardware_interface
     {
         static bool init = true;
 
-        if (((DriverSocket*)drivers_map_[name_].get())->isServoOn(3000))
+        if (((DriverSocket*)drivers_map_[hw_config_->hardware_].get())->isServoOn(3000))
         {
             std::vector<std::string> params { "ANGLES", "DANGLES" };
-            ((DriverSocket*)drivers_map_[name_].get())->request(params);
-            std::vector<double> angles = ((DriverSocket*)drivers_map_[name_].get())->readParam(params[0]);
+            ((DriverSocket*)drivers_map_[hw_config_->hardware_].get())->request(params);
+            std::vector<double> angles = ((DriverSocket*)drivers_map_[hw_config_->hardware_].get())->readParam(params[0]);
             for (std::size_t i = 0; i < 
                 std::min(std::min(joint_positions_.size(), angles.size()), hw_config_->forward_dirs_.size()); ++i)
             {
                 joint_positions_[i] = angles::from_degrees(hw_config_->forward_dirs_[i] * angles[i]);
             }
-            std::vector<double> velocities = ((DriverSocket*)drivers_map_[name_].get())->readParam(params[1]);
+            std::vector<double> velocities = ((DriverSocket*)drivers_map_[hw_config_->hardware_].get())->readParam(params[1]);
             for (std::size_t i = 0; i < 
                 std::min(std::min(joint_velocities_.size(), velocities.size()), hw_config_->forward_dirs_.size()); ++i)
             {
@@ -154,7 +154,7 @@ namespace whi_arm_hardware_interface
 #endif
     void ChinHardwareInterface::write(WhiArmInterface* HwIf, double Dt)
     {
-        if (((DriverSocket*)drivers_map_[name_].get())->isServoOn(2000))
+        if (((DriverSocket*)drivers_map_[hw_config_->hardware_].get())->isServoOn(2000))
         {
 #ifdef DEBUG
             /// simulate demo.py
@@ -165,7 +165,7 @@ namespace whi_arm_hardware_interface
             // }
             // if (index < commands_demo.size())
             // {
-            //     drivers_map_[name_]->actuate(commands_demo[index]);
+            //     drivers_map_[hw_config_->hardware_]->actuate(commands_demo[index]);
             //     ++index;
             // }
             /// single joint testing
@@ -174,7 +174,7 @@ namespace whi_arm_hardware_interface
             static const double LIMIT_MAX = 30.0;
             static double pos = LIMIT_MIN;
             std::string cmd = std::string("MOVEJ,1") + "," + std::to_string(pos) + ",5.0,10.0";
-            drivers_map_[name_]->actuate(cmd);
+            drivers_map_[hw_config_->hardware_]->actuate(cmd);
             pos += step;
             if (pos >= LIMIT_MAX)
             {
@@ -195,7 +195,7 @@ namespace whi_arm_hardware_interface
             positions.pop_back();
             if (controller_type_.find("position_controllers") != std::string::npos)
             {
-                drivers_map_[name_]->actuate(composeCommand(positions));
+                drivers_map_[hw_config_->hardware_]->actuate(composeCommand(positions));
             }
             else if (controller_type_.find("pos_vel_controllers") != std::string::npos)
             {
@@ -210,7 +210,7 @@ namespace whi_arm_hardware_interface
                 angulars.pop_back();
                 accelerations.pop_back();
 
-                drivers_map_[name_]->actuate(composeCommand(positions, angulars, accelerations));
+                drivers_map_[hw_config_->hardware_]->actuate(composeCommand(positions, angulars, accelerations));
             }
             else if (controller_type_.find("pos_vel_acc_controllers") != std::string::npos)
             {
@@ -227,7 +227,7 @@ namespace whi_arm_hardware_interface
                 }
                 accelerations.pop_back();
 
-                drivers_map_[name_]->actuate(composeCommand(positions, angulars, accelerations));
+                drivers_map_[hw_config_->hardware_]->actuate(composeCommand(positions, angulars, accelerations));
 #ifdef DEBUG
                 std::cout << "velocity command:" << std::endl;
                 for (const auto& it : joint_velocity_commands_)

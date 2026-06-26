@@ -15,5 +15,5 @@ whi_arm_interface:
   control_mode: close # open
   hardware: serial # micro_ros
   serial:
-    port: '/dev/ttyACM0'
+    port: /dev/ttyACM0
     baudrate: 115200

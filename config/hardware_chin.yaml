@@ -1,11 +1,11 @@
 whi_arm_interface:
   loop_hz: 50 # hz
   shutdown_patience: 5000 #ms
-  hardware: 'socket'
+  hardware: socket
   forward_dirs: [-1, -1, -1, -1, -1, -1]
   speed_rate: 1.0
   angular_velocities: [90, 90, 90, 90, 90, 90]
   angular_accelerations: [180, 180, 180, 180, 180, 180]
   socket:
-    addr: '192.168.4.44'
+    addr: 192.168.4.44
     port: 9866 # 9866 port for crc, 9888 for terminated string

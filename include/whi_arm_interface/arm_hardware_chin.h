@@ -44,7 +44,6 @@ namespace whi_arm_hardware_interface
 
     protected:
         std::shared_ptr<HwConfig> hw_config_{ nullptr };
-        const std::string name_{ "socket" };
         std::string controller_type_{ "position" };
     };
 }
