@@ -16,14 +16,11 @@ All text above must be included in any redistribution.
 #include "whi_arm_interface/driver_socket_json.h"
 #include "whi_arm_interface/jakaAPI/jkerr.h"
 #include "whi_arm_interface/jakaAPI/jktypes.h"
-#include "whi_interfaces/msg/whi_motion_state.hpp"
 #include "whi_arm_interface/hw_config_jaka.h"
 #include <json/json.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <angles/angles.h>
-// #include <trajectory_msgs/JointTrajectory.h> // TODO
-// #include <controller_manager_msgs/srv/list_controllers.hpp> // TODO
 
 #include <thread>
 

@@ -62,7 +62,9 @@ namespace whi_arm_hardware_interface
         }
         else
         {
-            RCLCPP_FATAL_STREAM(get_logger(), "\033[1;31m" << "unsupported series" << "\033[0m");
+            RCLCPP_FATAL_STREAM(get_logger(), "\033[1;31m" <<
+                "unsupported series"
+                << "\033[0m");
             return hardware_interface::CallbackReturn::ERROR;
         }
 
@@ -117,8 +119,9 @@ namespace whi_arm_hardware_interface
             set_command(name, get_state(name));
         }
 
-        RCLCPP_INFO_STREAM(get_logger(),
-            "\033[1;32m" << "Hardware interface successfully started!" << "\033[0m");
+        RCLCPP_INFO_STREAM(get_logger(), "\033[1;32m" <<
+            "Hardware interface successfully started!"
+            << "\033[0m");
 
         return hardware_interface::CallbackReturn::SUCCESS;
     }
@@ -135,8 +138,9 @@ namespace whi_arm_hardware_interface
             RCLCPP_INFO(get_logger(), "%.1f seconds left...", hw_stop_seconds_ - i);
         }
 
-        RCLCPP_INFO_STREAM(get_logger(),
-            "\033[1;32m" << "Hardware interface successfully stopped!" << "\033[0m");
+        RCLCPP_INFO_STREAM(get_logger(), "\033[1;32m" <<
+            "Hardware interface successfully stopped!"
+            << "\033[0m");
 
         return hardware_interface::CallbackReturn::SUCCESS;
     }

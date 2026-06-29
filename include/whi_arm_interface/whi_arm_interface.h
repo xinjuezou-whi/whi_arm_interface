@@ -35,7 +35,7 @@ namespace whi_arm_hardware_interface
 	class WhiArmInterface : public hardware_interface::SystemInterface
 	{
 	public:
-        RCLCPP_SHARED_PTR_DEFINITIONS(WhiArmInterface);
+        RCLCPP_SHARED_PTR_DEFINITIONS(WhiArmInterface)
     
         hardware_interface::CallbackReturn on_init(const hardware_interface::HardwareComponentInterfaceParams& Params) override;
         hardware_interface::CallbackReturn on_configure(const rclcpp_lifecycle::State& PreState) override;

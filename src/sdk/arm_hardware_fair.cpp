@@ -16,14 +16,11 @@ All text above must be included in any redistribution.
 #include "whi_arm_interface/driver_socket_fair.h"
 #include "whi_arm_interface/fairAPI/robot_error.h"
 #include "whi_arm_interface/fairAPI/robot_types.h"
-#include "whi_interfaces/msg/whi_motion_state.hpp"
 #include "whi_arm_interface/hw_config_fair.h"
 #include <json/json.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <angles/angles.h>
-// #include <trajectory_msgs/msg/joint_trajectory.hpp> // TODO
-// #include <controller_manager_msgs/srv/list_controllers.hpp> // TODO
 
 #include <thread>
 #include <regex>
