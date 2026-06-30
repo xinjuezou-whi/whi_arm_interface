@@ -74,6 +74,12 @@ namespace whi_arm_hardware_interface
         }
     }
 
+    bool ArHardwareInterface::setIo(int Addr, int Level)
+    {
+        // nothing, so far
+        return false;
+    }
+
     void ArHardwareInterface::read(WhiArmInterface* HwIf, double Dt)
     {
         // do nothing, since the position is updated by message callback

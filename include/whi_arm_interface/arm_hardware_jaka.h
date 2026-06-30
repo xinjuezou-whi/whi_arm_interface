@@ -43,6 +43,7 @@ namespace whi_arm_hardware_interface
         virtual ~JakaHardwareInterface();
 
     public:
+        bool setIo(int Addr, int Level) override;
         void read(WhiArmInterface* HwIf, double Dt) override;
         void write(WhiArmInterface* HwIf, double Dt) override;
         void quit() override;
@@ -77,7 +78,6 @@ namespace whi_arm_hardware_interface
         std::string controller_type_{ "position" };
         std::unique_ptr<JAKAZuRobot> api_instance_{ nullptr };
         std::vector<double> payload_to_tcp_;
-        bool standby_{ false };
         bool is_protective_{ false };
         double lpf_{ 0.5 };
     };

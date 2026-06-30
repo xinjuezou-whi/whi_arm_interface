@@ -52,8 +52,17 @@ namespace whi_arm_hardware_interface
         virtual ~ArmHardware(); 
 
     public:
+        virtual bool setIo(int Addr, int Level) = 0;
         virtual void read(WhiArmInterface* HwIf, double Dt) = 0;
         virtual void write(WhiArmInterface* HwIf, double Dt) = 0;
+        bool isInitialized () const
+        {
+            return initialized_;
+        };
+        bool isStandby() const
+        {
+            return standby_;
+        };
 
     protected:
         virtual bool parseConfig(const std::string& Config) = 0;
@@ -90,5 +99,6 @@ namespace whi_arm_hardware_interface
 
         std::map<std::string, std::unique_ptr<DriverBase>> drivers_map_;
 		bool initialized_{ false };
+        bool standby_{ false };
     };
 } // namespace whi_arm_hardware_interface

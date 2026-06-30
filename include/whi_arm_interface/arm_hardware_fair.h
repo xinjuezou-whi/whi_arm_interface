@@ -38,6 +38,7 @@ namespace whi_arm_hardware_interface
         virtual ~FairHardwareInterface();
 
     public:
+        bool setIo(int Addr, int Level) override;
         void read(WhiArmInterface* HwIf, double Dt) override;
         void write(WhiArmInterface* HwIf, double Dt) override;
         void quit() override;
@@ -137,7 +138,6 @@ namespace whi_arm_hardware_interface
         std::shared_ptr<HwConfig> hw_config_{ nullptr };
         std::string controller_type_{ "position" };
         // std::unique_ptr<whi_fair::FRRobot> api_instance_{ nullptr };
-        bool standby_{ false };
         bool is_protective_{ false };
         const std::map<std::string, int> CMD_MAP_{
         {

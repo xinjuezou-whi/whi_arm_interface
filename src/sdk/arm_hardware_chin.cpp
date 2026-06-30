@@ -62,6 +62,12 @@ namespace whi_arm_hardware_interface
         }
     }
 
+    bool ChinHardwareInterface::setIo(int Addr, int Level)
+    {
+        // nothing, so far
+        return false;
+    }
+
     bool ChinHardwareInterface::parseConfig(const std::string& Config)
     {
         return false;

@@ -80,6 +80,25 @@ namespace whi_arm_hardware_interface
         initializing();
     }
 
+    bool JakaHardwareInterface::setIo(int Addr, int Level)
+    {
+        if (Addr < 1 || Addr > 7)
+        {
+            return false;
+        }
+
+        bool res = true;
+        if (hw_config_->hardware_ == hardware[API])
+        {
+            res = api_setIo(Addr, Level);
+        }
+        else if (hw_config_->hardware_ == hardware[SOCKET])
+        {
+            res = tcp_setIo(Addr, Level);
+        }
+        return res;
+    }
+
     void JakaHardwareInterface::read(WhiArmInterface* HwIf, double Dt)
     {
         if (initialized_)
@@ -595,38 +614,4 @@ namespace whi_arm_hardware_interface
         return api_instance_->collision_recover() == ERR_SUCC &&
             api_instance_->servo_move_enable(true) == ERR_SUCC;
     }
-
-    // bool JakaHardwareInterface::onServiceReady(std_srvs::Trigger::Request& Request, std_srvs::Trigger::Response& Response)
-    // {
-    //     return (Response.success = standby_);
-    // }
-
-    // bool JakaHardwareInterface::onServiceIo(whi_interfaces::WhiSrvIo::Request& Request,
-    //     whi_interfaces::WhiSrvIo::Response& Response)
-    // {
-    //     if (Request.addr < 1 || Request.addr > 7)
-    //     {
-    //         Response.result = false;
-    //     }
-    //     else
-    //     {
-    //         if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_READ)
-    //         {
-    //             Response.result = false;
-    //         }
-    //         else if (Request.operation == whi_interfaces::WhiSrvIo::Request::OPER_WRITE)
-    //         {
-    //             if (hw_config_->hardware_ == hardware[API])
-    //             {
-    //                 Response.result = api_setIo(Request.addr, Request.level);
-    //             }
-    //             else if (hw_config_->hardware_ == hardware[SOCKET])
-    //             {
-    //                 Response.result = tcp_setIo(Request.addr, Request.level);
-    //             }
-    //         }
-    //     }
-
-    //     return Response.result;
-    // }
 }

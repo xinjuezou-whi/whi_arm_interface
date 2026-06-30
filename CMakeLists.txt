@@ -76,17 +76,6 @@ ament_target_dependencies(${PROJECT_NAME}
   whi_interfaces
 )
 
-add_executable(whi_arm_interface_util
-  src/whi_arm_interface_util.cpp
-  src/whi_arm_interface_util_node.cpp
-)
-ament_target_dependencies(whi_arm_interface_util
-  rclcpp
-  std_msgs
-  std_srvs
-  whi_interfaces
-)
-
 # Causes the visibility macros to use dllexport rather than dllimport,
 # which is appropriate when building the dll but not consuming it.
 target_compile_definitions(${PROJECT_NAME} PRIVATE "WHI_MOTION_HW_INTERFACE_BUILDING_LIBRARY")
@@ -100,7 +89,6 @@ pluginlib_export_plugin_description_file(hardware_interface plugins.xml)
 install(
   TARGETS
     ${PROJECT_NAME}
-    whi_arm_interface_util
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib

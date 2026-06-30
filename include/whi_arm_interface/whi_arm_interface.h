@@ -21,6 +21,7 @@ Changelog:
 ******************************************************************/
 #pragma once
 #include "arm_hardware_base.h"
+#include "whi_interfaces/srv/whi_srv_io.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/macros.hpp>
@@ -28,6 +29,7 @@ Changelog:
 #include <hardware_interface/hardware_info.hpp>
 #include <hardware_interface/system_interface.hpp>
 #include <hardware_interface/types/hardware_interface_return_values.hpp>
+#include <std_srvs/srv/trigger.hpp>
 
 namespace whi_arm_hardware_interface
 {
@@ -50,6 +52,12 @@ namespace whi_arm_hardware_interface
         hardware_interface::return_type write(const rclcpp::Time& Time,
             const rclcpp::Duration& Period) override;
 
+    protected:
+        bool onServiceIo(const std::shared_ptr<whi_interfaces::srv::WhiSrvIo::Request> Request,
+	        std::shared_ptr<whi_interfaces::srv::WhiSrvIo::Response> Response);
+        bool onServiceReady(const std::shared_ptr<std_srvs::srv::Trigger::Request> Request,
+	        std::shared_ptr<std_srvs::srv::Trigger::Response> Response);
+
     private:
         // Parameters for the simulation
         double hw_start_seconds_{ 0.2 };
@@ -57,5 +65,8 @@ namespace whi_arm_hardware_interface
 
 	protected:
 		std::unique_ptr<ArmHardware> hardware_{ nullptr };
+        rclcpp::Node::SharedPtr util_node_;
+        rclcpp::Service<whi_interfaces::srv::WhiSrvIo>::SharedPtr srv_io_{ nullptr };
+        rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_ready_{ nullptr };
 	};
 } // namespace whi_arm_hardware_interface

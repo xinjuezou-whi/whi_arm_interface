@@ -31,6 +31,7 @@ namespace whi_arm_hardware_interface
         virtual ~ChinHardwareInterface();
     
     public:
+        bool setIo(int Addr, int Level) override;
         void read(WhiArmInterface* HwIf, double Dt) override;
         void write(WhiArmInterface* HwIf, double Dt) override;
         void quit() override;

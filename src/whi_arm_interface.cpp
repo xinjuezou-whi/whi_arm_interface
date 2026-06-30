@@ -30,6 +30,17 @@ namespace whi_arm_hardware_interface
 		std::cout << "\nWHI arm interface VERSION 04.08.2" << std::endl;
 		std::cout << "Copyright © 2022-2026 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
+        auto executor = Params.executor.lock();
+        if (!executor)
+        {
+            RCLCPP_FATAL_STREAM(get_logger(), "\033[1;31m" <<
+                "cannot lock executor"
+            	<< "\033[0m");
+            return hardware_interface::CallbackReturn::ERROR;
+        }
+        util_node_ = std::make_shared<rclcpp::Node>("whi_arm_interface_util");
+        executor->add_node(util_node_);
+
         if (hardware_interface::SystemInterface::on_init(Params) !=
             hardware_interface::CallbackReturn::SUCCESS)
         {
@@ -218,6 +229,28 @@ namespace whi_arm_hardware_interface
         hardware_->write(this, Period.seconds());
 
         return hardware_interface::return_type::OK;
+    }
+
+    bool WhiArmInterface::onServiceIo(const std::shared_ptr<whi_interfaces::srv::WhiSrvIo::Request> Request,
+        std::shared_ptr<whi_interfaces::srv::WhiSrvIo::Response> Response)
+    {
+        if (Request->io.operation == whi_interfaces::msg::WhiIo::OPER_READ)
+        {
+            Response->result = false;
+        }
+        else
+        {
+            Response->result = hardware_->setIo(Request->io.addr, Request->io.level);
+        }
+        
+        return Response->result;
+    }
+
+    bool WhiArmInterface::onServiceReady(const std::shared_ptr<std_srvs::srv::Trigger::Request> Request,
+        std::shared_ptr<std_srvs::srv::Trigger::Response> Response)
+    {
+        Response->success = hardware_->isStandby();
+        return Response->success;
     }
 }  // namespace whi_arm_hardware_interface
 
