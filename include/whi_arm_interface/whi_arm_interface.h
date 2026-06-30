@@ -65,7 +65,7 @@ namespace whi_arm_hardware_interface
 
 	protected:
 		std::unique_ptr<ArmHardware> hardware_{ nullptr };
-        rclcpp::Node::SharedPtr util_node_;
+        rclcpp::Node::SharedPtr util_node_{ nullptr };
         rclcpp::Service<whi_interfaces::srv::WhiSrvIo>::SharedPtr srv_io_{ nullptr };
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_ready_{ nullptr };
 	};
