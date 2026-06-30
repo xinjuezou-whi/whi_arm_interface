@@ -40,6 +40,10 @@ namespace whi_arm_hardware_interface
         }
         util_node_ = std::make_shared<rclcpp::Node>("whi_arm_interface_util");
         executor->add_node(util_node_);
+        srv_io_ = util_node_->create_service<whi_interfaces::srv::WhiSrvIo>("arm_io",
+            std::bind(&WhiArmInterface::onServiceIo, this, std::placeholders::_1, std::placeholders::_2));
+        srv_ready_ = util_node_->create_service<std_srvs::srv::Trigger>("arm_ready",
+            std::bind(&WhiArmInterface::onServiceReady, this, std::placeholders::_1, std::placeholders::_2));
 
         if (hardware_interface::SystemInterface::on_init(Params) !=
             hardware_interface::CallbackReturn::SUCCESS)
