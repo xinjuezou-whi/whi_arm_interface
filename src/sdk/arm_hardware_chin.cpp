@@ -62,6 +62,11 @@ namespace whi_arm_hardware_interface
         }
     }
 
+    std::string ChinHardwareInterface::getSwEstopTopic() const
+    {
+        return hw_config_ ? hw_config_->sw_estop_topic_ : "na";
+    }
+
     bool ChinHardwareInterface::setIo(int Addr, int Level)
     {
         // nothing, so far
@@ -70,7 +75,49 @@ namespace whi_arm_hardware_interface
 
     bool ChinHardwareInterface::parseConfig(const std::string& Config)
     {
-        return false;
+        try
+        {
+            hw_config_ = std::make_shared<HwConfig>();
+
+            // from hardware's yaml
+            YAML::Node node = YAML::LoadFile(Config);
+
+            const auto& root = node["whi_arm_interface"];
+            if (root)
+            {
+                hw_config_->sw_estop_topic_ = root["sw_estop_topic"].as<std::string>();
+                hw_config_->shutdown_patience_ = root["shutdown_patience"].as<int>();
+                hw_config_->hardware_ = root["hardware"].as<std::string>();
+                hw_config_->forward_dirs_ = root["forward_dirs"].as<std::vector<int>>();
+                hw_config_->speed_rate_ = root["speed_rate"].as<int>();
+                hw_config_->angular_velocities_ = root["angular_velocities"].as<std::vector<double>>();
+                hw_config_->angular_accelerations_ = root["angular_accelerations"].as<std::vector<double>>();
+
+                const auto& socket = root["socket"];
+                if (socket)
+                {
+                    hw_config_->socket_addr_ = socket["addr"].as<std::string>();
+                    hw_config_->socket_port_ = socket["port"].as<int>();
+                }
+
+                return true;
+            }
+            else
+            {
+                RCLCPP_FATAL_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                    "failed to find whi_arm_interface properties in " << Config
+                    << "\033[0m");
+                hw_config_.reset();
+                return false;
+            }
+        }
+        catch (const std::exception& e)
+        {
+            RCLCPP_FATAL_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                "failed to load hardware config file " << Config << " with error: " << e.what()
+                << "\033[0m");
+            return false;
+        }
     }
 
     void ChinHardwareInterface::read(WhiArmInterface* HwIf, double Dt)

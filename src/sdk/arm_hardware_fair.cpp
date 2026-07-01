@@ -81,6 +81,11 @@ namespace whi_arm_hardware_interface
         initializing();
     }
 
+    std::string FairHardwareInterface::getSwEstopTopic() const
+    {
+        return hw_config_ ? hw_config_->sw_estop_topic_ : "na";
+    }
+
     bool FairHardwareInterface::setIo(int Addr, int Level)
     {
         if (Addr < 1 || Addr > 7)
@@ -103,7 +108,60 @@ namespace whi_arm_hardware_interface
 
     bool FairHardwareInterface::parseConfig(const std::string& Config)
     {
-        return false;
+        try
+        {
+            hw_config_ = std::make_shared<HwConfig>();
+
+            // from hardware's yaml
+            YAML::Node node = YAML::LoadFile(Config);
+
+            const auto& root = node["whi_arm_interface"];
+            if (root)
+            {
+                hw_config_->sw_estop_topic_ = root["sw_estop_topic"].as<std::string>();
+                hw_config_->shutdown_patience_ = root["shutdown_patience"].as<int>();
+                hw_config_->velocity_scale_ = root["velocity_scale"].as<double>();
+                hw_config_->payload_weight_ = root["payload_weight"].as<double>();
+                hw_config_->payload_to_tcp_ = root["payload_to_tcp"].as<std::vector<double>>();
+                hw_config_->hardware_ = root["hardware"].as<std::string>();
+                hw_config_->startup_duration_ = root["startup_duration"].as<double>();
+
+                const auto& socket = root["socket"];
+                if (socket)
+                {
+                    hw_config_->socket_addr_ = socket["addr"].as<std::string>();
+                    hw_config_->socket_port_ = socket["port"].as<int>();
+                }
+                const auto& api = root["api"];
+                if (api)
+                {
+                    hw_config_->api_addr_ = api["addr"].as<std::string>();
+                }
+
+                const auto& debug = root["debug"];
+                if (debug)
+                {
+                    hw_config_->debug_print_tcp_feedback_ = debug["debug_print_tcp_feedback"].as<bool>();
+                }
+
+                return true;
+            }
+            else
+            {
+                RCLCPP_FATAL_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                    "failed to find whi_arm_interface properties in " << Config
+                    << "\033[0m");
+                hw_config_.reset();
+                return false;
+            }
+        }
+        catch (const std::exception& e)
+        {
+            RCLCPP_FATAL_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
+                "failed to load hardware config file " << Config << " with error: " << e.what()
+                << "\033[0m");
+            return false;
+        }
     }
 
     void FairHardwareInterface::read(WhiArmInterface* HwIf, double Dt)

@@ -27,7 +27,7 @@ namespace whi_arm_hardware_interface
     hardware_interface::CallbackReturn WhiArmInterface::on_init(const hardware_interface::HardwareComponentInterfaceParams& Params)
     {
         /// node version and copyright announcement
-		std::cout << "\nWHI arm interface VERSION 04.08.2" << std::endl;
+		std::cout << "\nWHI arm interface VERSION 04.08.3" << std::endl;
 		std::cout << "Copyright © 2022-2026 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
         auto executor = Params.executor.lock();
@@ -82,6 +82,9 @@ namespace whi_arm_hardware_interface
                 << "\033[0m");
             return hardware_interface::CallbackReturn::ERROR;
         }
+        sub_estop_ = util_node_->create_subscription<std_msgs::msg::Bool>(
+            hardware_->getSwEstopTopic(), 10, std::bind(&WhiArmInterface::onMsgEstop, this, std::placeholders::_1));
+
 
         hw_start_seconds_ = std::max(0.0, stod(info_.hardware_parameters["hw_start_duration_seconds"]));
         hw_stop_seconds_ = std::max(0.0, stod(info_.hardware_parameters["hw_stop_duration_seconds"]));
@@ -230,7 +233,14 @@ namespace whi_arm_hardware_interface
     hardware_interface::return_type WhiArmInterface::write(const rclcpp::Time& /*Time*/,
         const rclcpp::Duration& Period)
     {
-        hardware_->write(this, Period.seconds());
+        if (!sw_estopped_.load())
+        {
+            hardware_->write(this, Period.seconds());
+        }
+        else
+        {
+            RCLCPP_WARN(get_logger(), "software ESTOP detected! ...please release first and re-try...");
+        }
 
         return hardware_interface::return_type::OK;
     }
@@ -255,6 +265,11 @@ namespace whi_arm_hardware_interface
     {
         Response->success = hardware_->isStandby();
         return Response->success;
+    }
+
+    void WhiArmInterface::onMsgEstop(const std_msgs::msg::Bool::SharedPtr Msg)
+    {
+        sw_estopped_.store(Msg->data);
     }
 }  // namespace whi_arm_hardware_interface
 

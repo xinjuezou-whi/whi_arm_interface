@@ -18,6 +18,8 @@ Changelog:
 #pragma once
 #include "driver_base.h"
 #include <whi_interfaces/msg/whi_state.hpp>
+#include <whi_interfaces/msg/whi_motion_state.hpp>
+#include <yaml-cpp/yaml.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
@@ -45,6 +47,7 @@ namespace whi_arm_hardware_interface
             : node_handle_(Node)
         {
             pub_state_ = node_handle_->create_publisher<whi_interfaces::msg::WhiState>("whi_state", 10);
+            pub_motion_state_ = node_handle_->create_publisher<whi_interfaces::msg::WhiMotionState>("arm_state", 10);
             using FollowJointTrajectory = control_msgs::action::FollowJointTrajectory;
             trajectory_action_client_ = rclcpp_action::create_client<FollowJointTrajectory>(node_handle_,
                 "/motion_controller/follow_joint_trajectory"); // TODO: verify the action name
@@ -52,6 +55,7 @@ namespace whi_arm_hardware_interface
         virtual ~ArmHardware(); 
 
     public:
+        virtual std::string getSwEstopTopic() const = 0;
         virtual bool setIo(int Addr, int Level) = 0;
         virtual void read(WhiArmInterface* HwIf, double Dt) = 0;
         virtual void write(WhiArmInterface* HwIf, double Dt) = 0;
@@ -81,6 +85,34 @@ namespace whi_arm_hardware_interface
             msg.values.push_back(value);
         
             pub_state_->publish(msg);
+
+            whi_interfaces::msg::WhiMotionState motionMsg;
+            motionMsg.header.stamp = node_handle_->get_clock()->now();
+            if (Value.find("standby") != std::string::npos)
+            {
+                motionMsg.state = whi_interfaces::msg::WhiMotionState::STA_STANDBY;
+            }
+            else if (Value.find("running") != std::string::npos)
+            {
+                motionMsg.state = whi_interfaces::msg::WhiMotionState::STA_RUNNING;
+            }
+            else if (Value.find("operating") != std::string::npos)
+            {
+                motionMsg.state = whi_interfaces::msg::WhiMotionState::STA_OPERATING;
+            }
+            else if (Value.find("estopped") != std::string::npos)
+            {
+                motionMsg.state = whi_interfaces::msg::WhiMotionState::STA_ESTOP;
+            }
+            else if (Value.find("protective") != std::string::npos)
+            {
+                motionMsg.state = whi_interfaces::msg::WhiMotionState::STA_FAULT;
+            }
+            else
+            {
+                motionMsg.state = whi_interfaces::msg::WhiMotionState::STA_FAULT;
+            }
+            pub_motion_state_->publish(motionMsg);
         }
 
     public:
@@ -95,6 +127,7 @@ namespace whi_arm_hardware_interface
     protected:
         rclcpp::Node::SharedPtr node_handle_{ nullptr };
         rclcpp::Publisher<whi_interfaces::msg::WhiState>::SharedPtr pub_state_{ nullptr };
+        rclcpp::Publisher<whi_interfaces::msg::WhiMotionState>::SharedPtr pub_motion_state_{ nullptr };
         rclcpp_action::Client<control_msgs::action::FollowJointTrajectory>::SharedPtr trajectory_action_client_{ nullptr };
 
         std::map<std::string, std::unique_ptr<DriverBase>> drivers_map_;

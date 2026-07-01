@@ -30,6 +30,7 @@ Changelog:
 #include <hardware_interface/system_interface.hpp>
 #include <hardware_interface/types/hardware_interface_return_values.hpp>
 #include <std_srvs/srv/trigger.hpp>
+#include <std_msgs/msg/bool.hpp>
 
 namespace whi_arm_hardware_interface
 {
@@ -57,6 +58,7 @@ namespace whi_arm_hardware_interface
 	        std::shared_ptr<whi_interfaces::srv::WhiSrvIo::Response> Response);
         bool onServiceReady(const std::shared_ptr<std_srvs::srv::Trigger::Request> Request,
 	        std::shared_ptr<std_srvs::srv::Trigger::Response> Response);
+        void onMsgEstop(const std_msgs::msg::Bool::SharedPtr Msg);
 
     private:
         // Parameters for the simulation
@@ -68,5 +70,7 @@ namespace whi_arm_hardware_interface
         rclcpp::Node::SharedPtr util_node_{ nullptr };
         rclcpp::Service<whi_interfaces::srv::WhiSrvIo>::SharedPtr srv_io_{ nullptr };
         rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_ready_{ nullptr };
+        rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr sub_estop_{ nullptr };
+        std::atomic_bool sw_estopped_{ false };
 	};
 } // namespace whi_arm_hardware_interface

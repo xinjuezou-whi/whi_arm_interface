@@ -52,6 +52,7 @@ namespace whi_arm_hardware_interface
         }
 
     public:
+        std::string sw_estop_topic_{ "estop" };
         int shutdown_patience_{ 5000 };
         double velocity_scale_{ 1.0 };
         double payload_weight_{ 0.0 };

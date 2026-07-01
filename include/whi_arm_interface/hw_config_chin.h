@@ -60,6 +60,7 @@ namespace whi_arm_hardware_interface
         }
 
     public:
+        std::string sw_estop_topic_{ "estop" };
         int shutdown_patience_{ 5000 };
         std::string hardware_{ "socket" };
         std::vector<int> forward_dirs_;

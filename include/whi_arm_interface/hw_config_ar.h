@@ -34,8 +34,8 @@ namespace whi_arm_hardware_interface
         {
             std::cout << "******************** HwConfig" << std::endl;
             std::cout << "shutdown_patience_: " << Config.shutdown_patience_ << std::endl;
-            std::cout << "steps_per_deg_: ";
-            for (const auto& it : Config.steps_per_deg_)
+            std::cout << "steps_per_degree_: ";
+            for (const auto& it : Config.steps_per_degree_)
             {
                 std::cout << it << ", ";
             }
@@ -78,8 +78,9 @@ namespace whi_arm_hardware_interface
         }
 
     public:
+        std::string sw_estop_topic_{ "estop" };
         int shutdown_patience_{ 5000 };
-        std::vector<double> steps_per_deg_;
+        std::vector<double> steps_per_degree_;
         std::vector<int> forward_dirs_;
         std::vector<int> limits_dirs_;
         std::vector<double> home_offsets_;
