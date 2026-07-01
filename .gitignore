@@ -48,6 +48,7 @@ Browse.VC.opendb
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
+*.drawio
 
 # Directories
 bin
