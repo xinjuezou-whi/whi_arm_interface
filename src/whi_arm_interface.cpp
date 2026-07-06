@@ -22,12 +22,12 @@ Changelog:
 #include "whi_arm_interface/arm_hardware_jaka.h"
 #include "whi_arm_interface/arm_hardware_fair.h"
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     hardware_interface::CallbackReturn WhiArmInterface::on_init(const hardware_interface::HardwareComponentInterfaceParams& Params)
     {
         /// node version and copyright announcement
-		std::cout << "\nWHI arm interface VERSION 04.08.3" << std::endl;
+		std::cout << "\nWHI arm interface VERSION 04.08.4" << std::endl;
 		std::cout << "Copyright © 2022-2026 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
         auto executor = Params.executor.lock();
@@ -67,11 +67,11 @@ namespace whi_arm_hardware_interface
         {
 			hardware_ = std::make_unique<ChinHardwareInterface>(info_.hardware_parameters["hw_config"], get_node());
         }
-        else if (info_.hardware_parameters["arm_series"] == "jaka")
+        else if (info_.hardware_parameters["arm_series"] == "fr")
         {
 			hardware_ = std::make_unique<FairHardwareInterface>(info_.hardware_parameters["hw_config"], get_node());
         }
-        else if (info_.hardware_parameters["arm_series"] == "fr")
+        else if (info_.hardware_parameters["arm_series"] == "jaka")
         {
 			hardware_ = std::make_unique<JakaHardwareInterface>(info_.hardware_parameters["hw_config"], get_node());
         }
@@ -106,14 +106,15 @@ namespace whi_arm_hardware_interface
         // END: This part here is for exemplary purposes - Please do not copy to your production code
 
         // reset values always when configuring hardware
-        for (const auto& [name, descr] : joint_state_interfaces_)
-        {
-            set_state(name, 0.0);
-        }
-        for (const auto& [name, descr] : joint_command_interfaces_)
-        {
-            set_command(name, 0.0);
-        }
+        // states
+        std::fill(hardware_->joint_positions_.begin(), hardware_->joint_positions_.end(), 0.0);
+        std::fill(hardware_->joint_velocities_.begin(), hardware_->joint_velocities_.end(), 0.0);
+        std::fill(hardware_->joint_acceleration_commands_.begin(), hardware_->joint_acceleration_commands_.end(), 0.0);
+        std::fill(hardware_->joint_efforts_.begin(), hardware_->joint_efforts_.end(), 0.0);
+        // commands
+        std::fill(hardware_->joint_position_commands_.begin(), hardware_->joint_position_commands_.end(), 0.0);
+        std::fill(hardware_->joint_velocity_commands_.begin(), hardware_->joint_velocity_commands_.end(), 0.0);
+        std::fill(hardware_->joint_effort_commands_.begin(), hardware_->joint_effort_commands_.end(), 0.0);
 
         RCLCPP_INFO(get_logger(), "Hardware interface successfully configured!");
 
@@ -132,10 +133,7 @@ namespace whi_arm_hardware_interface
         }
 
         // command and state should be equal when starting
-        for (const auto& [name, descr] : joint_command_interfaces_)
-        {
-            set_command(name, get_state(name));
-        }
+        hardware_->joint_position_commands_ = hardware_->joint_positions_;
 
         RCLCPP_INFO_STREAM(get_logger(), "\033[1;32m" <<
             "Hardware interface successfully started!"
@@ -167,6 +165,7 @@ namespace whi_arm_hardware_interface
     {
         hardware_->joint_positions_.resize(info_.joints.size());
         hardware_->joint_velocities_.resize(info_.joints.size());
+        hardware_->joint_acceleration_commands_.resize(info_.joints.size());
         hardware_->joint_efforts_.resize(info_.joints.size());
 
         std::vector<hardware_interface::StateInterface> stateInterfaces;
@@ -184,6 +183,9 @@ namespace whi_arm_hardware_interface
             stateInterfaces.emplace_back(hardware_interface::StateInterface(
                 info_.joints[i].name, hardware_interface::HW_IF_EFFORT, &hardware_->joint_efforts_[i]));
         }
+
+        stateInterfaces.emplace_back(hardware_interface::StateInterface(
+            "speed_scaling", "speed_scaling_factor", &hardware_->speed_scaling_combined_));
 
         return stateInterfaces;
     }
@@ -271,7 +273,7 @@ namespace whi_arm_hardware_interface
     {
         sw_estopped_.store(Msg->data);
     }
-}  // namespace whi_arm_hardware_interface
+}  // namespace whi_arm_interface
 
 #include "pluginlib/class_list_macros.hpp"
-PLUGINLIB_EXPORT_CLASS(whi_arm_hardware_interface::WhiArmInterface, hardware_interface::SystemInterface)
+PLUGINLIB_EXPORT_CLASS(whi_arm_interface::WhiArmInterface, hardware_interface::SystemInterface)

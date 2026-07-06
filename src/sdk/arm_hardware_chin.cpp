@@ -21,7 +21,7 @@ All text above must be included in any redistribution.
 
 #include <thread>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     ChinHardwareInterface::ChinHardwareInterface(const std::string& Config, rclcpp::Node::SharedPtr Node)
         : ArmHardware(Config, Node)
@@ -322,4 +322,4 @@ namespace whi_arm_hardware_interface
 #endif
         return std::string("MOVEJ,DOF," + Positions + ",DOF," + Velocities + ",DOF," + Accelerations + ",0");
     }
-}
+} // namespace whi_arm_interface

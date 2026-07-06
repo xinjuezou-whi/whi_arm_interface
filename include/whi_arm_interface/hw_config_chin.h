@@ -20,7 +20,7 @@ Changelog:
 #include <iostream>
 #include <map>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     /// config
     class HwConfig
@@ -70,4 +70,4 @@ namespace whi_arm_hardware_interface
         std::string socket_addr_{ "192.168.4.44" };
         int socket_port_{ 9866 };
     };
-} // namespace whi_arm_hardware_interface
+} // namespace whi_arm_interface

@@ -27,7 +27,7 @@ Changelog:
 
 #include <std_srvs/srv/trigger.hpp>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     // forward declaration
     class HwConfig;
@@ -82,4 +82,4 @@ namespace whi_arm_hardware_interface
         bool is_protective_{ false };
         double lpf_{ 0.5 };
     };
-}
+} // namespace whi_arm_interface

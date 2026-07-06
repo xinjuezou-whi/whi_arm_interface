@@ -25,7 +25,7 @@ All text above must be included in any redistribution.
 #include <thread>
 #include <regex>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     FairHardwareInterface::FairHardwareInterface(const std::string& Config, rclcpp::Node::SharedPtr Node)
         : ArmHardware(Config, Node)
@@ -141,7 +141,7 @@ namespace whi_arm_hardware_interface
                 const auto& debug = root["debug"];
                 if (debug)
                 {
-                    hw_config_->debug_print_tcp_feedback_ = debug["debug_print_tcp_feedback"].as<bool>();
+                    hw_config_->debug_print_tcp_feedback_ = debug["print_tcp_feedback"].as<bool>();
                 }
 
                 return true;
@@ -672,4 +672,4 @@ namespace whi_arm_hardware_interface
         //     api_instance_->servo_move_enable(true) == ERR_SUCC;
         return false;
     }
-}
+} // namespace whi_arm_interface

@@ -29,7 +29,7 @@ Changelog:
 #include <memory>
 #include <vector>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     // forward declaration
     class WhiArmInterface;
@@ -52,7 +52,7 @@ namespace whi_arm_hardware_interface
             trajectory_action_client_ = rclcpp_action::create_client<FollowJointTrajectory>(node_handle_,
                 "/motion_controller/follow_joint_trajectory"); // TODO: verify the action name
         };
-        virtual ~ArmHardware(); 
+        virtual ~ArmHardware() = default; 
 
     public:
         virtual std::string getSwEstopTopic() const = 0;
@@ -123,6 +123,7 @@ namespace whi_arm_hardware_interface
 		std::vector<double> joint_velocity_commands_;
         std::vector<double> joint_acceleration_commands_;
 		std::vector<double> joint_effort_commands_;
+        double speed_scaling_combined_{ 1.0 };
 
     protected:
         rclcpp::Node::SharedPtr node_handle_{ nullptr };
@@ -134,4 +135,4 @@ namespace whi_arm_hardware_interface
 		bool initialized_{ false };
         bool standby_{ false };
     };
-} // namespace whi_arm_hardware_interface
+} // namespace whi_arm_interface

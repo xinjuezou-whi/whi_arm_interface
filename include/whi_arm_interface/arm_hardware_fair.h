@@ -26,7 +26,7 @@ Changelog:
 
 #include <std_srvs/srv/trigger.hpp>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     // forward declaration
     class HwConfig;
@@ -154,4 +154,4 @@ namespace whi_arm_hardware_interface
             {"SetDO", 204}
         }};
     };
-}
+} // namespace whi_arm_interface

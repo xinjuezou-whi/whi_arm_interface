@@ -53,7 +53,7 @@ Then, launch the node with the specified arm brand and its model:
 
 Take the JAKA a5 as an example:
 ```
-roslaunch whi_arm_interface whi_arm_hardware_interface.launch arm:=jaka arm_model:=a5
+ros2 launch whi_arm_interface launch.py arm:=jaka arm_model:=a5
 ```
 
 ## Limited

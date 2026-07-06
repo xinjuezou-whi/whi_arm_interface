@@ -20,7 +20,7 @@ Changelog:
 #include <iostream>
 #include <map>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     /// config
     class HwConfig
@@ -96,4 +96,4 @@ namespace whi_arm_hardware_interface
         std::string serial_port_{ "/dev/ttyACM0" };
         int serial_baudrate_{ 9600 };
     };
-} // namespace whi_arm_hardware_interface
+} // namespace whi_arm_interface

@@ -32,6 +32,17 @@ find_package(serial REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(whi_interfaces REQUIRED)
 
+find_library(JAKA_API_LIBRARY
+    NAMES jakaAPI
+    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/lib/arm
+    REQUIRED
+)
+find_library(FAIR_API_LIBRARY
+    NAMES fairino
+    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/lib/arm
+    REQUIRED
+)
+
 ###########
 ## Build ##
 ###########
@@ -56,13 +67,18 @@ add_library(${PROJECT_NAME}
   ${WHI_SDK_SRC}
   src/whi_arm_interface.cpp
 )
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    BUILD_RPATH "\$ORIGIN/arm"
+    INSTALL_RPATH "\$ORIGIN/arm"
+)
 ## Link to the third party non-ros libraries
 target_link_libraries(${PROJECT_NAME}
   sockpp
   jsoncpp
+  yaml-cpp
   boost_system
-  jakaAPI
-  # fairino
+  ${JAKA_API_LIBRARY}
+  ${FAIR_API_LIBRARY}
 )
 ament_target_dependencies(${PROJECT_NAME}
   rclcpp

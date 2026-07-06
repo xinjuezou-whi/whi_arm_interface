@@ -21,7 +21,7 @@ Changelog:
 
 #include <serial/serial.h>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     // forward declaration
     class HwConfig;
@@ -55,4 +55,4 @@ namespace whi_arm_hardware_interface
         std::vector<char> axes_prefix_;
         int homing_state_{ STA_HOMED };
     };
-}
+} // namespace whi_arm_interface

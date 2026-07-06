@@ -24,7 +24,7 @@ All text above must be included in any redistribution.
 
 #include <thread>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     JakaHardwareInterface::JakaHardwareInterface(const std::string& Config, rclcpp::Node::SharedPtr Node)
         : ArmHardware(Config, Node)
@@ -139,7 +139,7 @@ namespace whi_arm_hardware_interface
                 const auto& debug = root["debug"];
                 if (debug)
                 {
-                    hw_config_->debug_print_tcp_feedback_ = debug["debug_print_tcp_feedback"].as<bool>();
+                    hw_config_->debug_print_tcp_feedback_ = debug["print_tcp_feedback"].as<bool>();
                 }
 
                 return true;
@@ -677,4 +677,4 @@ namespace whi_arm_hardware_interface
         return api_instance_->collision_recover() == ERR_SUCC &&
             api_instance_->servo_move_enable(true) == ERR_SUCC;
     }
-}
+} // namespace whi_arm_interface

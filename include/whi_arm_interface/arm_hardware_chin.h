@@ -19,7 +19,7 @@ Changelog:
 #pragma once
 #include "arm_hardware_base.h"
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     // forward declaration
     class HwConfig;
@@ -48,4 +48,4 @@ namespace whi_arm_hardware_interface
         std::shared_ptr<HwConfig> hw_config_{ nullptr };
         std::string controller_type_{ "position" };
     };
-}
+} // namespace whi_arm_interface

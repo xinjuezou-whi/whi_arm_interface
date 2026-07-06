@@ -32,7 +32,7 @@ Changelog:
 #include <std_srvs/srv/trigger.hpp>
 #include <std_msgs/msg/bool.hpp>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
 	/// brief Hardware interface for a robot
 	class WhiArmInterface : public hardware_interface::SystemInterface
@@ -73,4 +73,4 @@ namespace whi_arm_hardware_interface
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr sub_estop_{ nullptr };
         std::atomic_bool sw_estopped_{ false };
 	};
-} // namespace whi_arm_hardware_interface
+} // namespace whi_arm_interface

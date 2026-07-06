@@ -20,7 +20,7 @@ Changelog:
 #include <iostream>
 #include <map>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     /// config
     class HwConfig
@@ -64,4 +64,4 @@ namespace whi_arm_hardware_interface
         std::string api_addr_{ "192.168.4.44" };
         bool debug_print_tcp_feedback_{ false };
     };
-} // namespace whi_arm_hardware_interface
+} // namespace whi_arm_interface

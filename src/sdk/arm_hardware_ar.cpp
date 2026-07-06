@@ -22,7 +22,7 @@ All text above must be included in any redistribution.
 
 #include <thread>
 
-namespace whi_arm_hardware_interface
+namespace whi_arm_interface
 {
     ArHardwareInterface::ArHardwareInterface(const std::string& Config, rclcpp::Node::SharedPtr Node, const std::vector<std::string>& JointNames)
         : ArmHardware(Config, Node)
@@ -238,4 +238,4 @@ namespace whi_arm_hardware_interface
             }
         }
     }
-}
+} // namespace whi_arm_interface
