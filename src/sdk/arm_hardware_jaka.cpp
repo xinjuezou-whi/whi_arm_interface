@@ -397,13 +397,23 @@ namespace whi_arm_interface
             }
             std::cout << std::endl;
 #endif
-
-            return true;
         }
         else
         {
             return false;
         }
+
+        // {"cmdName":"get_rapid_rate"}
+        root["cmdName"] = "get_rapid_rate";
+        requests.push_back(Json::writeString(builder, root));
+        ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->request(requests).empty();
+        auto rate = ((DriverSocketJson*)drivers_map_[hw_config_->hardware_].get())->readParam(paramKey[RAPID_RATE]);
+        if (!rate.empty())
+        {
+            speed_scaling_combined_ = rate.front();
+        }
+
+        return true;
     }
 
     bool JakaHardwareInterface::tcp_servoPositions(const std::vector<double>& Positions, double Duration)
@@ -619,12 +629,19 @@ namespace whi_arm_interface
             }
             std::cout << std::endl;
 #endif
-            return true;
         }
         else
         {
             return false;
         }
+
+        double rate = 1.0;
+        if (api_instance_->get_rapidrate(&rate) == ERR_SUCC)
+        {
+            speed_scaling_combined_ = rate;
+        }
+
+        return true;
     }
 
     bool JakaHardwareInterface::api_servoPositions(const std::vector<double>& Positions, double Duration)

@@ -472,13 +472,15 @@ namespace whi_arm_interface
             }
             std::cout << std::endl;
 #endif
-
-            return true;
         }
         else
         {
             return false;
         }
+
+        speed_scaling_combined_ = int(hw_config_->velocity_scale_ * 100.0);
+
+        return true;
     }
 
     bool FairHardwareInterface::tcp_servoPositions(const std::vector<double>& Positions, double Duration)
@@ -615,12 +617,15 @@ namespace whi_arm_interface
 //             }
 //             std::cout << std::endl;
 // #endif
-//             return true;
 //         }
 //         else
         {
             return false;
         }
+
+        speed_scaling_combined_ = int(hw_config_->velocity_scale_ * 100.0);
+
+        return true;
     }
 
     bool FairHardwareInterface::api_servoPositions(const std::vector<double>& Positions, double Duration)
