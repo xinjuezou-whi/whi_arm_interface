@@ -36,9 +36,6 @@ namespace whi_arm_interface
 
     void FairHardwareInterface::quit()
     {
-        // give time to thirdparty dependencies
-        std::this_thread::sleep_for(std::chrono::milliseconds(hw_config_->shutdown_patience_));
-
         if (hw_config_->hardware_ == hardware[API])
         {
             api_close();
@@ -119,7 +116,6 @@ namespace whi_arm_interface
             if (root)
             {
                 hw_config_->sw_estop_topic_ = root["sw_estop_topic"].as<std::string>();
-                hw_config_->shutdown_patience_ = root["shutdown_patience"].as<int>();
                 hw_config_->velocity_scale_ = root["velocity_scale"].as<double>();
                 hw_config_->payload_weight_ = root["payload_weight"].as<double>();
                 hw_config_->payload_to_tcp_ = root["payload_to_tcp"].as<std::vector<double>>();

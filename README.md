@@ -13,7 +13,7 @@ arm hardware interface
 ## Dependency
 
 ```
-git clone https://github.com/xinjuezou-whi/whi_interfaces.git
+git clone -b ros2 https://github.com/xinjuezou-whi/whi_interfaces.git
 ```
 
 And other third parties:
@@ -24,14 +24,16 @@ And other third parties:
 ## Advertise services
 **arm_io**(whi_interfaces::WhiSrvIo)
 Offers the IO setting service, here is an example of a client's request:
+
 ```
-rosservice call /whi_arm_interface/arm_io "{addr: 1, operation: 1, level: 1}"
+ros2 service call /arm_io whi_interfaces/srv/WhiSrvIo "{io: {addr: <io_index>, operation: 1, level: <0/1>}}"
 ```
 
 **arm_ready**(std_srvs::Trigger)
 Offers the query of whether the arm is on standby for motion execution, here is an example of a client's request:
+
 ```
-rosservice call /whi_arm_interface/arm_ready
+ros2 service call /arm_ready std_srvs/srv/Trigger
 ```
 
 ## Publish topics
@@ -41,7 +43,7 @@ Publishes the state of arm periodically
 ## Usage
 First, it requires the moveit_config packages that WHI refactors:
 
-moveit_config packages for [AR series](https://github.com/xinjuezou-whi/ar_arm.git), [Chin series](https://github.com/xinjuezou-whi/chin_arm), [JAKA series](https://github.com/xinjuezou-whi/jaka_robot), and [FAIR series](https://github.com/xinjuezou-whi/frcobot_ros)
+moveit_config packages for [AR series](https://github.com/xinjuezou-whi/ar_arm.git), [Chin series](https://github.com/xinjuezou-whi/chin_arm), [JAKA series](https://github.com/xinjuezou-whi/jaka_ros2.git), and [FAIR series](https://github.com/xinjuezou-whi/frcobot_ros)
 
 Then, launch the node with the specified arm brand and its model:
 | Brand   | Seriels |

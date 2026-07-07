@@ -33,7 +33,6 @@ namespace whi_arm_interface
         static void printOut(const HwConfig& Config)
         {
             std::cout << "******************** HwConfig" << std::endl;
-            std::cout << "shutdown_patience_: " << Config.shutdown_patience_ << std::endl;
             std::cout << "hardware_: " << Config.hardware_ << std::endl;
             std::cout << "forward_dirs_: ";
             for (const auto& it : Config.forward_dirs_)
@@ -61,7 +60,6 @@ namespace whi_arm_interface
 
     public:
         std::string sw_estop_topic_{ "estop" };
-        int shutdown_patience_{ 5000 };
         std::string hardware_{ "socket" };
         std::vector<int> forward_dirs_;
         double speed_rate_{ 1.0 };

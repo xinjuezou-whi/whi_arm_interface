@@ -83,7 +83,7 @@ def launch_setup(context, *args, **kwargs):
         convert_types=True
     )
 
-    control_node = Node(
+    node_control = Node(
         package="controller_manager",
         executable="ros2_control_node",
         namespace=namespace,
@@ -147,7 +147,7 @@ def launch_setup(context, *args, **kwargs):
 
     launch_nodes = [
         node_robot_state_publisher,
-        control_node,
+        node_control,
         spawn_joint_state_broadcaster_controller,
         delay_robot_drive_controller_spawner_after_joint_state_broadcaster_spawner,
         delay_rviz_after_joint_state_broadcaster_spawner,

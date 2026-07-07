@@ -41,8 +41,6 @@ namespace whi_arm_interface
 
     void ChinHardwareInterface::quit()
     {
-        // give time to thirdparty dependencies
-        std::this_thread::sleep_for(std::chrono::milliseconds(hw_config_->shutdown_patience_));
     }
 
     void ChinHardwareInterface::init()
@@ -86,7 +84,6 @@ namespace whi_arm_interface
             if (root)
             {
                 hw_config_->sw_estop_topic_ = root["sw_estop_topic"].as<std::string>();
-                hw_config_->shutdown_patience_ = root["shutdown_patience"].as<int>();
                 hw_config_->hardware_ = root["hardware"].as<std::string>();
                 hw_config_->forward_dirs_ = root["forward_dirs"].as<std::vector<int>>();
                 hw_config_->speed_rate_ = root["speed_rate"].as<int>();

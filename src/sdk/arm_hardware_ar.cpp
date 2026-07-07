@@ -33,8 +33,6 @@ namespace whi_arm_interface
 
     void ArHardwareInterface::quit()
     {
-        // give time to thirdparty dependencies
-        std::this_thread::sleep_for(std::chrono::milliseconds(hw_config_->shutdown_patience_));
     }
 
     void ArHardwareInterface::init(const std::vector<std::string>& JointNames)
@@ -156,7 +154,6 @@ namespace whi_arm_interface
             if (root)
             {
                 hw_config_->sw_estop_topic_ = root["sw_estop_topic"].as<std::string>();
-                hw_config_->shutdown_patience_ = root["shutdown_patience"].as<int>();
                 hw_config_->steps_per_degree_ = root["steps_per_degree"].as<std::vector<double>>();
                 hw_config_->forward_dirs_ = root["forward_dirs"].as<std::vector<int>>();
                 hw_config_->limits_dirs_ = root["limits_dirs"].as<std::vector<int>>();

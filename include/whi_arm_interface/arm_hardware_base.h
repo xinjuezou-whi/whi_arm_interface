@@ -59,6 +59,7 @@ namespace whi_arm_interface
         virtual bool setIo(int Addr, int Level) = 0;
         virtual void read(WhiArmInterface* HwIf, double Dt) = 0;
         virtual void write(WhiArmInterface* HwIf, double Dt) = 0;
+        virtual void quit() = 0;
         bool isInitialized () const
         {
             return initialized_;
@@ -70,7 +71,6 @@ namespace whi_arm_interface
 
     protected:
         virtual bool parseConfig(const std::string& Config) = 0;
-        virtual void quit() = 0;
         void publishState(int Level, const std::string& Key, const std::string& Value,
 		    const std::string& Description = std::string(""))
         {

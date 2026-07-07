@@ -33,7 +33,6 @@ namespace whi_arm_interface
         static void printOut(const HwConfig& Config)
         {
             std::cout << "******************** HwConfig" << std::endl;
-            std::cout << "shutdown_patience_: " << Config.shutdown_patience_ << std::endl;
             std::cout << "velocity_scale_: " << Config.velocity_scale_ << std::endl;
             std::cout << "payload_weight_: " << Config.payload_weight_ << std::endl;
             std::cout << "payload_to_tcp_: ";
@@ -53,7 +52,6 @@ namespace whi_arm_interface
 
     public:
         std::string sw_estop_topic_{ "estop" };
-        int shutdown_patience_{ 5000 };
         double velocity_scale_{ 1.0 };
         double payload_weight_{ 0.0 };
         std::vector<double> payload_to_tcp_;
