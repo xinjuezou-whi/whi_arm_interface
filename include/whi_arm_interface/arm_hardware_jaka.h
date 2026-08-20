@@ -35,8 +35,8 @@ namespace whi_arm_interface
     class JakaHardwareInterface : public ArmHardware
     {
     protected:
-        enum ParamKey { JOINT_POS = 0, PROTECTIVE_STOP, ENABLE, POWER, IN_SERVO, PARAM_KEY_SUM };
-        static constexpr const char* paramKey[PARAM_KEY_SUM] = { "joint_pos", "protective_stop", "enable", "power", "in_servomove" };
+        enum ParamKey { JOINT_POS = 0, PROTECTIVE_STOP, ENABLE, POWER, IN_SERVO, RAPID_RATE, PARAM_KEY_SUM };
+        static constexpr const char* paramKey[PARAM_KEY_SUM] = { "joint_pos", "protective_stop", "enable", "power", "in_servomove", "rate_value"};
 
     public:
         JakaHardwareInterface(const std::string& Config, rclcpp::Node::SharedPtr Node);

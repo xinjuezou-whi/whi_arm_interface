@@ -1,0 +1,88 @@
+init_commands:
+  - param: enable motor
+    data: [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfc]
+    base_addr: 0x00
+    absolute_base: false   # 实际 CAN ID = device_addr_（该关节的 ESC_ID / send_can_id）
+    delay: 1
+
+deactivate_commands:
+  - param: disable motor
+    data: [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfd]
+    base_addr: 0x00
+    absolute_base: false
+    delay: 1
+  - param: clear error
+    data: [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfb]
+    base_addr: 0x00
+    absolute_base: false
+    delay: 1
+
+static_commands:
+  - group: set zero
+    params:
+      - param: 'save zero point'
+        data: [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe]
+        base_addr: 0x00
+        absolute_base: false
+  - group: clear error
+    params:
+      - param: 'clear error'
+        data: [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfb]
+        base_addr: 0x00
+        absolute_base: false
+
+control_commands:
+  - command: mit_control
+    base_addr: 0x00
+    absolute_base: false     # 实际 CAN ID = device_addr_（ESC_ID）
+    encoding: bitpack
+    start_byte: 0
+    bit_fields:
+      - source: position     # rad，由 ros2_control write() 传入的目标位置
+        bit_width: 16
+        min: -12.5
+        max: 12.5
+      - source: velocity     # rad/s，同上（或 v_des 限速值）
+        bit_width: 12
+        min: -30.0
+        max: 30.0
+      - source: kp            # 每周期由 DriverDamiao 从 HwConfig::mit_kp_ 灌入
+        bit_width: 12
+        min: 0.0
+        max: 500.0
+      - source: kd            # 每周期由 DriverDamiao 从 HwConfig::mit_kd_ 灌入
+        bit_width: 12
+        min: 0.0
+        max: 5.0
+      - source: torque        # Nm，前馈力矩，一般给 0
+        bit_width: 12
+        min: -10.0
+        max: 10.0
+
+feedbacks:
+  - param: mit_state
+    base_addr: 0x00
+    absolute_base: false      # 实际匹配 CAN ID = recv_device_addr_（MST_ID）
+    encoding: bitpack
+    start_byte: 1              # byte0 是 ID|ERR<<4，不参与位打包解析，单独在 driver 里判 ERR
+    bit_fields:
+      - name: position
+        bit_width: 16
+        min: -12.5
+        max: 12.5
+      - name: velocity
+        bit_width: 12
+        min: -30.0
+        max: 30.0
+      - name: torque
+        bit_width: 12
+        min: -10.0
+        max: 10.0
+  - param: mos_temp
+    base_addr: 0x00
+    absolute_base: false
+    bytes: { 6: 0 }
+  - param: rotor_temp
+    base_addr: 0x00
+    absolute_base: false
+    bytes: { 7: 0 }

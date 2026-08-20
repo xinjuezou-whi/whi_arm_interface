@@ -30,24 +30,27 @@ namespace whi_arm_interface
         ~HwConfig() = default;
 
     public:
-        static void printOut(const HwConfig& Config)
+        void printOut()
         {
-            std::cout << "******************** HwConfig" << std::endl;
-            std::cout << "velocity_scale_: " << Config.velocity_scale_ << std::endl;
-            std::cout << "payload_weight_: " << Config.payload_weight_ << std::endl;
-            std::cout << "payload_to_tcp_: ";
-            for (const auto& it : Config.payload_to_tcp_)
+            if (debug_print_config_)
             {
-                std::cout << it << ", ";
+                std::cout << "******************** HwConfig" << std::endl;
+                std::cout << "velocity_scale_: " << velocity_scale_ << std::endl;
+                std::cout << "payload_weight_: " << payload_weight_ << std::endl;
+                std::cout << "payload_to_tcp_: ";
+                for (const auto& it : payload_to_tcp_)
+                {
+                    std::cout << it << ", ";
+                }
+                std::cout << std::endl;
+                std::cout << "hardware_: " << hardware_ << std::endl;
+                std::cout << "startup_duration_: " << startup_duration_ << std::endl;
+                std::cout << "lpf_: " << lpf_ << std::endl;
+                std::cout << "socket_addr_: " << socket_addr_ << std::endl;
+                std::cout << "api_addr_: " << api_addr_ << std::endl;
+                std::cout << "debug_print_tcp_feedback_: " << (debug_print_tcp_feedback_ ? "true" : "false") << std::endl;
+                std::cout << "******************** end of HwConfig" << std::endl;
             }
-            std::cout << std::endl;
-            std::cout << "hardware_: " << Config.hardware_ << std::endl;
-            std::cout << "startup_duration_: " << Config.startup_duration_ << std::endl;
-            std::cout << "lpf_: " << Config.lpf_ << std::endl;
-            std::cout << "socket_addr_: " << Config.socket_addr_ << std::endl;
-            std::cout << "api_addr_: " << Config.api_addr_ << std::endl;
-            std::cout << "debug_print_tcp_feedback_: " << (Config.debug_print_tcp_feedback_ ? "true" : "false") << std::endl;
-            std::cout << "******************** end of HwConfig" << std::endl;
         }
 
     public:
@@ -60,6 +63,7 @@ namespace whi_arm_interface
         double lpf_{ 2.0 };
         std::string socket_addr_{ "192.168.4.44" };
         std::string api_addr_{ "192.168.4.44" };
+        bool debug_print_config_{ false };
         bool debug_print_tcp_feedback_{ false };
     };
 } // namespace whi_arm_interface

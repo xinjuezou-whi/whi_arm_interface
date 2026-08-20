@@ -14,6 +14,10 @@ All text above must be included in any redistribution.
 Changelog:
 2022-06-13: Initial version
 2026-06-24: Migrate to ROS 2
+2026-08-12: add OpenArm(Damiao MIT-mode) series support;
+            fix on_deactivate() missing hardware_->quit() call;
+            fix util node / service / speed_scaling interface name
+            collision between left and right hardware instances
 2026-xx-xx: xxx
 ******************************************************************/
 #include "whi_arm_interface/whi_arm_interface.h"
@@ -21,13 +25,14 @@ Changelog:
 #include "whi_arm_interface/arm_hardware_chin.h"
 #include "whi_arm_interface/arm_hardware_jaka.h"
 #include "whi_arm_interface/arm_hardware_fair.h"
+#include "whi_arm_interface/arm_hardware_openarm.h"
 
 namespace whi_arm_interface
 {
     hardware_interface::CallbackReturn WhiArmInterface::on_init(const hardware_interface::HardwareComponentInterfaceParams& Params)
     {
         /// node version and copyright announcement
-		std::cout << "\nWHI arm interface VERSION 04.08.6" << std::endl;
+		std::cout << "\nWHI arm interface VERSION 04.09.1" << std::endl;
 		std::cout << "Copyright © 2022-2026 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
         auto executor = Params.executor.lock();
@@ -38,12 +43,6 @@ namespace whi_arm_interface
             	<< "\033[0m");
             return hardware_interface::CallbackReturn::ERROR;
         }
-        util_node_ = std::make_shared<rclcpp::Node>("whi_arm_interface_util");
-        executor->add_node(util_node_);
-        srv_io_ = util_node_->create_service<whi_interfaces::srv::WhiSrvIo>("arm_io",
-            std::bind(&WhiArmInterface::onServiceIo, this, std::placeholders::_1, std::placeholders::_2));
-        srv_ready_ = util_node_->create_service<std_srvs::srv::Trigger>("arm_ready",
-            std::bind(&WhiArmInterface::onServiceReady, this, std::placeholders::_1, std::placeholders::_2));
 
         if (hardware_interface::SystemInterface::on_init(Params) !=
             hardware_interface::CallbackReturn::SUCCESS)
@@ -75,6 +74,10 @@ namespace whi_arm_interface
         {
 			hardware_ = std::make_unique<JakaHardwareInterface>(info_.hardware_parameters["hw_config"], get_node());
         }
+        else if (info_.hardware_parameters["arm_series"] == "openarm")
+        {
+            hardware_ = std::make_unique<ArmHardwareOpenarm>(info_.hardware_parameters["hw_config"], get_node());
+        }
         else
         {
             RCLCPP_FATAL_STREAM(get_logger(), "\033[1;31m" <<
@@ -82,9 +85,28 @@ namespace whi_arm_interface
                 << "\033[0m");
             return hardware_interface::CallbackReturn::ERROR;
         }
+
+        std::string srvIo("arm_io");
+        std::string srvReady("arm_ready");
+        if (info_.hardware_parameters["arm_series"] == "openarm")
+        {
+            // NOTE: node/service names are prefixed with info_.name (e.g. "openarm_left_hardware_interface")
+            // to avoid collisions when multiple WhiArmInterface instances (left/right arm) run in the same process
+            util_node_ = std::make_shared<rclcpp::Node>(info_.name + "_util");
+            srvIo.assign(info_.name + "_io");
+            srvReady.assign(info_.name + "_ready");
+        }
+        else
+        {
+            util_node_ = std::make_shared<rclcpp::Node>("whi_arm_interface_util");
+        }
+        executor->add_node(util_node_);
+        srv_io_ = util_node_->create_service<whi_interfaces::srv::WhiSrvIo>(srvIo,
+            std::bind(&WhiArmInterface::onServiceIo, this, std::placeholders::_1, std::placeholders::_2));
+        srv_ready_ = util_node_->create_service<std_srvs::srv::Trigger>(srvReady,
+            std::bind(&WhiArmInterface::onServiceReady, this, std::placeholders::_1, std::placeholders::_2));
         sub_estop_ = util_node_->create_subscription<std_msgs::msg::Bool>(
             hardware_->getSwEstopTopic(), 10, std::bind(&WhiArmInterface::onMsgEstop, this, std::placeholders::_1));
-
 
         hw_start_seconds_ = std::max(0.0, stod(info_.hardware_parameters["hw_start_duration_seconds"]));
         hw_stop_seconds_ = std::max(0.0, stod(info_.hardware_parameters["hw_stop_duration_seconds"]));
@@ -216,9 +238,10 @@ namespace whi_arm_interface
             commandInterfaces.emplace_back(hardware_interface::CommandInterface(
                 info_.joints[i].name, hardware_interface::HW_IF_VELOCITY, &hardware_->joint_velocity_commands_[i]));
 
-            if (has_cmd_interface(info_.joints[i], hardware_interface::HW_IF_EFFORT)) {
-            commandInterfaces.emplace_back(hardware_interface::CommandInterface(
-                info_.joints[i].name, hardware_interface::HW_IF_EFFORT, &hardware_->joint_effort_commands_[i]));
+            if (has_cmd_interface(info_.joints[i], hardware_interface::HW_IF_EFFORT))
+            {
+                commandInterfaces.emplace_back(hardware_interface::CommandInterface(
+                    info_.joints[i].name, hardware_interface::HW_IF_EFFORT, &hardware_->joint_effort_commands_[i]));
             }
         }
 

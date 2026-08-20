@@ -8,3 +8,5 @@ whi_arm_interface:
   socket:
     addr: 192.168.4.44
     port: 9866 # 9866 port for crc, 9888 for terminated string
+  debug:
+    print_config: false

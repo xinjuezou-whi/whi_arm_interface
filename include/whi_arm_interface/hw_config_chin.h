@@ -30,32 +30,35 @@ namespace whi_arm_interface
         ~HwConfig() = default;
 
     public:
-        static void printOut(const HwConfig& Config)
+        void printOut()
         {
-            std::cout << "******************** HwConfig" << std::endl;
-            std::cout << "hardware_: " << Config.hardware_ << std::endl;
-            std::cout << "forward_dirs_: ";
-            for (const auto& it : Config.forward_dirs_)
+            if (debug_print_config_)
             {
-                std::cout << it << ", ";
+                std::cout << "******************** HwConfig" << std::endl;
+                std::cout << "hardware_: " << hardware_ << std::endl;
+                std::cout << "forward_dirs_: ";
+                for (const auto& it : forward_dirs_)
+                {
+                    std::cout << it << ", ";
+                }
+                std::cout << std::endl;
+                std::cout << "speed_rate_: " << speed_rate_ << std::endl;
+                std::cout << "angular_velocities_: " << std::endl;
+                for (const auto& it : angular_velocities_)
+                {
+                    std::cout << it << ", ";
+                }
+                std::cout << std::endl;
+                std::cout << "angular_accelerations_: ";
+                for (const auto& it : angular_accelerations_)
+                {
+                    std::cout << it << ", ";
+                }
+                std::cout << std::endl;
+                std::cout << "socket_addr_: " << socket_addr_ << std::endl;
+                std::cout << "socket_port_: " << socket_port_ << std::endl;
+                std::cout << "******************** end of HwConfig" << std::endl;
             }
-            std::cout << std::endl;
-            std::cout << "speed_rate_: " << Config.speed_rate_ << std::endl;
-            std::cout << "angular_velocities_: " << std::endl;
-            for (const auto& it : Config.angular_velocities_)
-            {
-                std::cout << it << ", ";
-            }
-            std::cout << std::endl;
-            std::cout << "angular_accelerations_: ";
-            for (const auto& it : Config.angular_accelerations_)
-            {
-                std::cout << it << ", ";
-            }
-            std::cout << std::endl;
-            std::cout << "socket_addr_: " << Config.socket_addr_ << std::endl;
-            std::cout << "socket_port_: " << Config.socket_port_ << std::endl;
-            std::cout << "******************** end of HwConfig" << std::endl;
         }
 
     public:
@@ -67,5 +70,6 @@ namespace whi_arm_interface
         std::vector<double> angular_accelerations_;
         std::string socket_addr_{ "192.168.4.44" };
         int socket_port_{ 9866 };
+        bool debug_print_config_{ false };
     };
 } // namespace whi_arm_interface

@@ -1,0 +1,93 @@
+whi_arm_interface:
+  sw_estop_topic: estop
+  canbus:
+    openarm_left_joint1:
+      protocol_config: /media/nvidia/nvme0n1pnvme0n1p1/ros2_ws/src/whi_arm_interface/config/protocol_dm4310_mit.yaml
+      bus_addr: can1
+      device_addr: 1
+      recv_device_addr: 17
+      mit_kp: 50.0
+      mit_kd: 1.0
+      drive_type: { position: 1 }
+      forward_dir: 1
+      resolution: 16384
+      multiple: true
+    openarm_left_joint2:
+      protocol_config: /media/nvidia/nvme0n1pnvme0n1p1/ros2_ws/src/whi_arm_interface/config/protocol_dm4310_mit.yaml
+      bus_addr: can1
+      device_addr: 2
+      recv_device_addr: 18
+      mit_kp: 50.0
+      mit_kd: 1.0
+      drive_type: { position: 1 }
+      forward_dir: 1
+      resolution: 16384
+      multiple: true
+    openarm_left_joint3:
+      protocol_config: /media/nvidia/nvme0n1pnvme0n1p1/ros2_ws/src/whi_arm_interface/config/protocol_dm4310_mit.yaml
+      bus_addr: can1
+      device_addr: 3
+      recv_device_addr: 19
+      mit_kp: 50.0
+      mit_kd: 1.0
+      drive_type: { position: 1 }
+      forward_dir: 1
+      resolution: 16384
+      multiple: true
+    openarm_left_joint4:
+      protocol_config: /media/nvidia/nvme0n1pnvme0n1p1/ros2_ws/src/whi_arm_interface/config/protocol_dm4310_mit.yaml
+      bus_addr: can1
+      device_addr: 4
+      recv_device_addr: 20
+      mit_kp: 50.0
+      mit_kd: 1.0
+      drive_type: { position: 1 }
+      forward_dir: 1
+      resolution: 16384
+      multiple: true
+    openarm_left_joint5:
+      protocol_config: /media/nvidia/nvme0n1pnvme0n1p1/ros2_ws/src/whi_arm_interface/config/protocol_dm4310_mit.yaml
+      bus_addr: can1
+      device_addr: 5
+      recv_device_addr: 21
+      mit_kp: 50.0
+      mit_kd: 1.0
+      drive_type: { position: 1 }
+      forward_dir: 1
+      resolution: 16384
+      multiple: true
+    openarm_left_joint6:
+      protocol_config: /media/nvidia/nvme0n1pnvme0n1p1/ros2_ws/src/whi_arm_interface/config/protocol_dm4310_mit.yaml
+      bus_addr: can1
+      device_addr: 6
+      recv_device_addr: 22
+      mit_kp: 50.0
+      mit_kd: 1.0
+      drive_type: { position: 1 }
+      forward_dir: 1
+      resolution: 16384
+      multiple: true
+    openarm_left_joint7:
+      protocol_config: /media/nvidia/nvme0n1pnvme0n1p1/ros2_ws/src/whi_arm_interface/config/protocol_dm4310_mit.yaml
+      bus_addr: can1
+      device_addr: 7
+      recv_device_addr: 23
+      mit_kp: 50.0
+      mit_kd: 1.0
+      drive_type: { position: 1 }
+      forward_dir: 1
+      resolution: 16384
+      multiple: true
+    openarm_left_finger_joint1:
+      protocol_config: /media/nvidia/nvme0n1pnvme0n1p1/ros2_ws/src/whi_arm_interface/config/protocol_dm4310_mit.yaml
+      bus_addr: can1
+      device_addr: 8
+      recv_device_addr: 24
+      mit_kp: 50.0
+      mit_kd: 1.0
+      drive_type: { position: 1 }
+      forward_dir: 1
+      resolution: 16384
+      multiple: true
+  debug:
+    print_config: false

@@ -137,7 +137,16 @@ namespace whi_arm_interface
                 const auto& debug = root["debug"];
                 if (debug)
                 {
-                    hw_config_->debug_print_tcp_feedback_ = debug["print_tcp_feedback"].as<bool>();
+                    const auto& printTcpFeedback = debug["print_tcp_feedback"];
+                    if (printTcpFeedback)
+                    {
+                        hw_config_->debug_print_tcp_feedback_ = printTcpFeedback.as<bool>();
+                    }
+                    const auto& printConfig = debug["print_config"];
+                    if (printConfig)
+                    {
+                        hw_config_->debug_print_config_ = printConfig.as<bool>();
+                    }
                 }
 
                 return true;

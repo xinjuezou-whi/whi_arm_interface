@@ -46,8 +46,9 @@ namespace whi_arm_interface
         ArmHardware(const std::string& Config, rclcpp::Node::SharedPtr Node)
             : node_handle_(Node)
         {
+            std::string nodeName = node_handle_->get_name();
             pub_state_ = node_handle_->create_publisher<whi_interfaces::msg::WhiState>("whi_state", 10);
-            pub_motion_state_ = node_handle_->create_publisher<whi_interfaces::msg::WhiMotionState>("arm_state", 10);
+            pub_motion_state_ = node_handle_->create_publisher<whi_interfaces::msg::WhiMotionState>(nodeName + "_arm_state", 10);
             using FollowJointTrajectory = control_msgs::action::FollowJointTrajectory;
             trajectory_action_client_ = rclcpp_action::create_client<FollowJointTrajectory>(node_handle_,
                 "/motion_controller/follow_joint_trajectory"); // TODO: verify the action name

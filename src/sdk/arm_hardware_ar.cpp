@@ -176,6 +176,16 @@ namespace whi_arm_interface
                     hw_config_->serial_baudrate_ = serial["baudrate"].as<int>();
                 }
 
+                const auto& debug = root["debug"];
+                if (debug)
+                {
+                    const auto& printConfig = debug["print_config"];
+                    if (printConfig)
+                    {
+                        hw_config_->debug_print_config_ = printConfig.as<bool>();
+                    }
+                }
+
                 return true;
             }
             else

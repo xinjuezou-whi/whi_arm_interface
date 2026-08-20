@@ -16,3 +16,5 @@ whi_arm_interface:
   serial:
     port: /dev/ttyACM0
     baudrate: 115200
+  debug:
+    print_config: false

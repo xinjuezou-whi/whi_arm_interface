@@ -97,6 +97,16 @@ namespace whi_arm_interface
                     hw_config_->socket_port_ = socket["port"].as<int>();
                 }
 
+                const auto& debug = root["debug"];
+                if (debug)
+                {
+                    const auto& printConfig = debug["print_config"];
+                    if (printConfig)
+                    {
+                        hw_config_->debug_print_config_ = printConfig.as<bool>();
+                    }
+                }
+
                 return true;
             }
             else

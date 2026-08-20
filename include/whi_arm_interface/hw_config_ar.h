@@ -30,50 +30,53 @@ namespace whi_arm_interface
         ~HwConfig() = default;
 
     public:
-        static void printOut(const HwConfig& Config)
+        void printOut()
         {
-            std::cout << "******************** HwConfig" << std::endl;
-            std::cout << "steps_per_degree_: ";
-            for (const auto& it : Config.steps_per_degree_)
+            if (debug_print_config_)
             {
-                std::cout << it << ", ";
+                std::cout << "******************** HwConfig" << std::endl;
+                std::cout << "steps_per_degree_: ";
+                for (const auto& it : steps_per_degree_)
+                {
+                    std::cout << it << ", ";
+                }
+                std::cout << std::endl;
+                std::cout << "forward_dirs_: ";
+                for (const auto& it : forward_dirs_)
+                {
+                    std::cout << it << ", ";
+                }
+                std::cout << std::endl;
+                std::cout << "limits_dirs_: " << std::endl;
+                for (const auto& it : limits_dirs_)
+                {
+                    std::cout << it << ", ";
+                }
+                std::cout << std::endl;
+                std::cout << "home_offsets_: ";
+                for (const auto& it : home_offsets_)
+                {
+                    std::cout << it << ", ";
+                }
+                std::cout << std::endl;
+                std::cout << "home_kinematics_: ";
+                for (const auto& it : home_kinematics_)
+                {
+                    std::cout << it << ", ";
+                }
+                std::cout << std::endl;
+                std::cout << "speed_rate_: " << speed_rate_ << std::endl;
+                std::cout << "acc_duration_: " << acc_duration_ << std::endl;
+                std::cout << "acc_rate_: " << acc_rate_ << std::endl;
+                std::cout << "dec_duration_: " << dec_duration_ << std::endl;
+                std::cout << "dec_rate_: " << dec_rate_ << std::endl;
+                std::cout << "close_mode_: " << (close_mode_ ? "true" : "false") << std::endl;
+                std::cout << "home_poweron_: " << (home_poweron_ ? "true" : "false") << std::endl;
+                std::cout << "hardware_: " << hardware_ << std::endl;
+                std::cout << "serial_port_: " << serial_port_ << std::endl;
+                std::cout << "serial_baudrate_: " << serial_baudrate_ << std::endl;
+                std::cout << "******************** end of HwConfig" << std::endl;
             }
-            std::cout << std::endl;
-            std::cout << "forward_dirs_: ";
-            for (const auto& it : Config.forward_dirs_)
-            {
-                std::cout << it << ", ";
-            }
-            std::cout << std::endl;
-            std::cout << "limits_dirs_: " << std::endl;
-            for (const auto& it : Config.limits_dirs_)
-            {
-                std::cout << it << ", ";
-            }
-            std::cout << std::endl;
-            std::cout << "home_offsets_: ";
-            for (const auto& it : Config.home_offsets_)
-            {
-                std::cout << it << ", ";
-            }
-            std::cout << std::endl;
-            std::cout << "home_kinematics_: ";
-            for (const auto& it : Config.home_kinematics_)
-            {
-                std::cout << it << ", ";
-            }
-            std::cout << std::endl;
-            std::cout << "speed_rate_: " << Config.speed_rate_ << std::endl;
-            std::cout << "acc_duration_: " << Config.acc_duration_ << std::endl;
-            std::cout << "acc_rate_: " << Config.acc_rate_ << std::endl;
-            std::cout << "dec_duration_: " << Config.dec_duration_ << std::endl;
-            std::cout << "dec_rate_: " << Config.dec_rate_ << std::endl;
-            std::cout << "close_mode_: " << (Config.close_mode_ ? "true" : "false") << std::endl;
-            std::cout << "home_poweron_: " << (Config.home_poweron_ ? "true" : "false") << std::endl;
-            std::cout << "hardware_: " << Config.hardware_ << std::endl;
-            std::cout << "serial_port_: " << Config.serial_port_ << std::endl;
-            std::cout << "serial_baudrate_: " << Config.serial_baudrate_ << std::endl;
-            std::cout << "******************** end of HwConfig" << std::endl;
         }
 
     public:
@@ -93,5 +96,6 @@ namespace whi_arm_interface
         std::string hardware_{ "serial" };
         std::string serial_port_{ "/dev/ttyACM0" };
         int serial_baudrate_{ 9600 };
+        bool debug_print_config_{ false };
     };
 } // namespace whi_arm_interface
