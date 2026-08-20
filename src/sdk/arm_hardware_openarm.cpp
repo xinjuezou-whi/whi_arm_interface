@@ -26,6 +26,11 @@ namespace whi_arm_interface
         }
     }
 
+    ArmHardwareOpenarm::~ArmHardwareOpenarm()
+    {
+        quit();
+    }
+
     std::string ArmHardwareOpenarm::getSwEstopTopic() const
     {
         return hw_config_ ? hw_config_->sw_estop_topic_ : std::string("estop");
@@ -69,9 +74,12 @@ namespace whi_arm_interface
                         const auto& driveType = it.second["drive_type"];
                         if (driveType)
                         {
-                            auto dt = driveType.as<std::map<std::string, int>>().begin();
-                            motor.drive_type_.first = dt->first;
-                            motor.drive_type_.second = dt->second;
+                            const auto driveTypeMap = driveType.as<std::map<std::string, int>>();
+                            if (!driveTypeMap.empty())
+                            {
+                                motor.drive_type_.first = driveTypeMap.begin()->first;
+                                motor.drive_type_.second = driveTypeMap.begin()->second;
+                            }
                         }
 
                         motor.forward_dir_ = it.second["forward_dir"].as<int>();

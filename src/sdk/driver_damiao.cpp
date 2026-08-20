@@ -23,11 +23,6 @@ DriverDamiao::DriverDamiao(const std::string& JointName, const std::string& BusA
 
 DriverDamiao::~DriverDamiao()
 {
-    terminated_.store(true);
-    if (th_read_.joinable())
-    {
-        th_read_.join();
-    }
 }
 
 void DriverDamiao::parseProtocolConfig(const std::string& ProtocolConfig)
@@ -102,6 +97,10 @@ void DriverDamiao::close()
         sendStaticCommands(*protocol_->deactivate_commands_list_);
     }
     terminated_.store(true);
+    if (th_read_.joinable())
+    {
+        th_read_.join();
+    }
     if (bus_)
     {
         bus_->close();

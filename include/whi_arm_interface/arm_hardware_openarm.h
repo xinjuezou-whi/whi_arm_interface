@@ -28,7 +28,7 @@ namespace whi_arm_interface
     public:
         ArmHardwareOpenarm() = delete;
         ArmHardwareOpenarm(const std::string& Config, rclcpp::Node::SharedPtr Node);
-        virtual ~ArmHardwareOpenarm() = default;
+        virtual ~ArmHardwareOpenarm();
 
     public:
         std::string getSwEstopTopic() const override;
