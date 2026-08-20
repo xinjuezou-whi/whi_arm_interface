@@ -44,7 +44,7 @@ Publishes the state of arm periodically
 ## Usage
 First, it requires the moveit_config packages that WHI refactors:
 
-moveit_config packages for [AR series](https://github.com/xinjuezou-whi/ar_arm.git), [Chin series](https://github.com/xinjuezou-whi/chin_arm), [JAKA series](https://github.com/xinjuezou-whi/jaka_ros2.git), [FAIR series](https://github.com/xinjuezou-whi/frcobot_ros), [OpenArm](https://github.com/enactic/openarm_ros2.git) and its [description](https://github.com/xinjuezou-whi/openarm_description.git)
+moveit_config packages for [AR series](https://github.com/xinjuezou-whi/ar_arm.git), [Chin series](https://github.com/xinjuezou-whi/chin_arm), [JAKA series](https://github.com/xinjuezou-whi/jaka_ros2.git), [FAIR series](https://github.com/xinjuezou-whi/frcobot_ros), [OpenArm](https://github.com/xinjuezou-whi/openarm_ros2.git) and its [description](https://github.com/xinjuezou-whi/openarm_description.git)
 
 Then, launch the node with the specified arm brand and its model:
 | Brand   | Seriels |
