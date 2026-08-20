@@ -9,6 +9,7 @@ arm hardware interface
 | Chin    | All     | not yet  |
 | JAKA    | All     | Passed   |
 | Fairino | All     | not yet  |
+| OpenArm | V2.0    | Passed   |
 
 ## Dependency
 
@@ -43,7 +44,7 @@ Publishes the state of arm periodically
 ## Usage
 First, it requires the moveit_config packages that WHI refactors:
 
-moveit_config packages for [AR series](https://github.com/xinjuezou-whi/ar_arm.git), [Chin series](https://github.com/xinjuezou-whi/chin_arm), [JAKA series](https://github.com/xinjuezou-whi/jaka_ros2.git), and [FAIR series](https://github.com/xinjuezou-whi/frcobot_ros)
+moveit_config packages for [AR series](https://github.com/xinjuezou-whi/ar_arm.git), [Chin series](https://github.com/xinjuezou-whi/chin_arm), [JAKA series](https://github.com/xinjuezou-whi/jaka_ros2.git), [FAIR series](https://github.com/xinjuezou-whi/frcobot_ros), [OpenArm](https://github.com/enactic/openarm_ros2.git) and its [description](https://github.com/xinjuezou-whi/openarm_description.git)
 
 Then, launch the node with the specified arm brand and its model:
 | Brand   | Seriels |
@@ -58,13 +59,18 @@ Take the JAKA a5 as an example:
 ros2 launch whi_arm_interface launch.py arm:=jaka arm_model:=a5
 ```
 
+Example of the OpenArm bimanual:
+```
+ros2 launch whi_arm_interface launch_openarm.py
+```
+
 ## Limited
-1. For FAIR series, collision check and recovery have not been implemented yet due to absence of protocol
+1. For FAIR series, collision check and recovery have not been implemented yet due to the absence of protocol
 2. xxx
 
 ## Permission for /dev/ttyama0
 
-For the AR arm which takes the serial port to communicate, the following command can be used to grant the serial privilege:
+For the AR arm which uses the serial port to communicate, the following command can be used to grant the serial privilege:
 ```
 sudo usermod -a -G dialout <user name>
 ```
