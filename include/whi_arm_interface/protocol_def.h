@@ -19,7 +19,23 @@ Changelog:
 2023-06-24: multiple control commands support
 2023-09-05: adapt variable length of control command
 2026-08-10: add bitpack encoding/decoding support for cross-byte protocols
-2026-xx-xx: xxx
+2026-08-21: FIX: loadControlCommandsMap()'s legacy per-byte parsing computed
+            data_'s resize length while filtering out any "byte" index >= 8,
+            but then wrote into data_[index] for EVERY entry in the config
+            with no such filter -- a protocol yaml with a stray/typo'd
+            "byte: 8" (or higher, or negative) entry in any control_commands'
+            "bytes" list caused an out-of-bounds vector write (a full
+            CommandByte object, including a std::any and shared_ptrs, written
+            past the end of the vector's heap allocation). This runs once at
+            startup (parseProtocolConfig()), so the corrupted heap chunk
+            metadata sits latent until some unrelated free() elsewhere much
+            later (observed: shutdown, freeing the HwConfig shared_ptr)
+            finally trips glibc's consistency check and aborts. Added bounds
+            checks (and a loud printf) here, and mirrored the same defensive
+            bounds-checking on the read side in retrieveFeedback() for both
+            the legacy per-byte and bitpack decode paths, since Raw is a
+            fixed 8-byte std::array and was indexed with unchecked
+            config-supplied offsets there too.
 ******************************************************************/
 #pragma once
 #include "printf_color.h"
@@ -427,6 +443,22 @@ public:
                         }
                         uint32_t numBytes = (totalBits + 7) / 8;
 
+                        // FIX: Raw is a fixed 8-byte std::array. start_byte_ and
+                        // numBytes both come from config (yaml "start_byte" /
+                        // "bit_fields"); without this check a misconfigured
+                        // protocol yaml (start_byte_ + numBytes > 8) reads past
+                        // the end of Raw -- an out-of-bounds read on the
+                        // caller's stack-local std::array<uint8_t,8>. Bail out
+                        // for this one feedback param rather than reading UB.
+                        if (size_t(param.second.start_byte_) + numBytes > Raw.size())
+                        {
+                            printf((std::string(RED) +
+                                "[error] bitpack feedback '%s' start_byte(%u)+numBytes(%u) exceeds frame size(%zu), skipped" +
+                                CLEANUP + "\n").c_str(),
+                                param.first.c_str(), unsigned(param.second.start_byte_), numBytes, Raw.size());
+                            continue;
+                        }
+
                         uint64_t acc = 0;
                         for (uint32_t i = 0; i < numBytes; ++i)
                         {
@@ -442,6 +474,29 @@ public:
                             double val = norm * (f.max_ - f.min_) + f.min_;
                             feedbacks.push_back(std::pair<std::string, std::any>(f.name_, val));
                         }
+                        continue;
+                    }
+
+                    // FIX: same reasoning as above -- bytes_[i].index_ comes
+                    // straight from config (yaml key under "bytes") with no
+                    // bound check before indexing the fixed 8-byte Raw array.
+                    // Validate every index before touching Raw for this param;
+                    // skip (and warn) the whole param on a bad config rather
+                    // than reading past the array.
+                    bool indicesValid = !param.second.bytes_.empty();
+                    for (const auto& fb : param.second.bytes_)
+                    {
+                        if (fb.index_ >= Raw.size())
+                        {
+                            indicesValid = false;
+                            break;
+                        }
+                    }
+                    if (!indicesValid)
+                    {
+                        printf((std::string(RED) +
+                            "[error] feedback '%s' has a byte index out of the 0..%zu frame range, skipped" +
+                            CLEANUP + "\n").c_str(), param.first.c_str(), Raw.size() - 1);
                         continue;
                     }
 
@@ -721,6 +776,30 @@ protected:
                 for (const auto& byte : bytes)
                 {
                     int index = byte["byte"].as<int>();
+
+                    // FIX: this is the actual root cause of the heap
+                    // corruption -- bytesLen (and thus data_'s size) above
+                    // was computed only from entries with 0 <= index < 8,
+                    // but this loop previously indexed data_[index] for
+                    // EVERY entry unconditionally. A protocol yaml with a
+                    // stray/typo'd "byte:" value >= 8 (or negative) caused
+                    // an out-of-bounds vector write here -- a full
+                    // CommandByte object written past the end of data_'s
+                    // heap allocation, corrupting adjacent heap chunk
+                    // metadata. This runs once at startup, so the damage
+                    // sits latent until some unrelated free() much later
+                    // (e.g. at shutdown) finally aborts on it. Validate
+                    // before indexing; skip the malformed entry loudly
+                    // instead of writing out of bounds.
+                    if (index < 0 || index >= int(Map->at(name).data_.size()))
+                    {
+                        printf((std::string(RED) +
+                            "[error] control command '%s' has byte index %d out of range [0, %zu), skipped" +
+                            CLEANUP + "\n").c_str(),
+                            name.c_str(), index, Map->at(name).data_.size());
+                        continue;
+                    }
+
                     try
                     {
                         Map->at(name).data_[index].source_ = uint8_t(byte["source"].as<int>());

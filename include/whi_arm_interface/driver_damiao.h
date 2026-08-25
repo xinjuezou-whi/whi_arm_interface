@@ -6,6 +6,14 @@ Apache License Version 2.0
 
 Changelog:
 2026-08-12: adapt to whi_arm_interface::DriverBase interface
+2026-08-21: make close() idempotent (closed_ is now atomic_bool) --
+            close() can now be reached both from
+            WhiArmInterface::on_deactivate() (via hardware_->quit()) AND
+            later from ~ArmHardwareOpenarm() as a destructor-time
+            fallback; without the guard the second call would re-send
+            the deactivate command list and re-join an already-joined
+            th_read_, the latter being undefined behavior
+            (std::terminate on most implementations)
 ******************************************************************/
 #pragma once
 #include "driver_base.h"
@@ -69,4 +77,9 @@ protected:
 
     std::thread th_read_;
     std::atomic_bool terminated_{ false };
+    // NEW: guards close() so it only actually runs once, no matter how many
+    // times it's invoked (on_deactivate -> hardware_->quit() -> close(),
+    // and/or destructor -> quit() -> close()). Using an atomic + exchange
+    // (rather than a plain bool) makes the check-and-set itself thread-safe.
+    std::atomic_bool closed_{ false };
 };

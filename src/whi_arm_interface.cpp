@@ -18,6 +18,22 @@ Changelog:
             fix on_deactivate() missing hardware_->quit() call;
             fix util node / service / speed_scaling interface name
             collision between left and right hardware instances
+2026-08-21: actually wire on_deactivate() to hardware_->quit() (previous
+            changelog entry claimed this fix but the call was still a
+            bare "// TODO" -- deactivate produced no real de-energize
+            command, so the arm stayed enabled until process exit, and
+            if the process was SIGTERM-killed before its destructors
+            ran, it never got de-energized at all)
+2026-08-24: FIX: util_node_ was registered into the shared controller_manager
+            executor in on_init() (executor->add_node(util_node_)) but was
+            never removed -- see whi_arm_interface.h changelog for the full
+            reasoning. Added detachUtilNode(), wired it into new
+            on_cleanup()/on_shutdown() overrides, and into a new explicit
+            destructor as a fallback net (same "callback + destructor
+            fallback" pattern as hardware_->quit(), see on_deactivate()
+            below). on_init() now stores Params.executor into executor_weak_
+            instead of only using the local `executor` variable, so the
+            later removal has something to call remove_node() on.
 2026-xx-xx: xxx
 ******************************************************************/
 #include "whi_arm_interface/whi_arm_interface.h"
@@ -29,6 +45,32 @@ Changelog:
 
 namespace whi_arm_interface
 {
+    WhiArmInterface::~WhiArmInterface()
+    {
+        // NEW (2026-08-24): fallback net -- see header changelog. Normally
+        // on_cleanup()/on_shutdown() will already have done this and
+        // detachUtilNode() is a no-op by the time we get here, but if this
+        // object is torn down without either lifecycle callback having run
+        // (e.g. abrupt teardown, an intervening state-machine path we don't
+        // control), this is the last chance to remove util_node_ from the
+        // executor before its memory is freed.
+        detachUtilNode();
+    }
+
+    void WhiArmInterface::detachUtilNode()
+    {
+        // idempotent: safe to call from on_cleanup(), on_shutdown(), AND
+        // the destructor without double-removing or crashing on a second call.
+        if (util_node_)
+        {
+            if (auto executor = executor_weak_.lock())
+            {
+                executor->remove_node(util_node_);
+            }
+            util_node_.reset();
+        }
+    }
+
     hardware_interface::CallbackReturn WhiArmInterface::on_init(const hardware_interface::HardwareComponentInterfaceParams& Params)
     {
         /// node version and copyright announcement
@@ -43,6 +85,10 @@ namespace whi_arm_interface
             	<< "\033[0m");
             return hardware_interface::CallbackReturn::ERROR;
         }
+        // NEW (2026-08-24): keep a weak reference so detachUtilNode() can
+        // call remove_node() later (in on_cleanup()/on_shutdown()/the
+        // destructor) without needing a fresh Params.executor at that point.
+        executor_weak_ = Params.executor;
 
         if (hardware_interface::SystemInterface::on_init(Params) !=
             hardware_interface::CallbackReturn::SUCCESS)
@@ -169,7 +215,24 @@ namespace whi_arm_interface
     {
         RCLCPP_INFO(get_logger(), "Deactivating hardware interface ...please wait...");
 
-        // TODO
+        // NOTE (2026-08-21 fix): this used to be a bare "// TODO" -- deactivate
+        // never actually told the hardware layer to de-energize the joints.
+        // The only place that really sent the "disable" CAN command was
+        // DriverDamiao::close(), which was only reachable via
+        // ArmHardwareOpenarm::quit(), which in turn was only ever called from
+        // ~ArmHardwareOpenarm(). That means the arm only got de-energized if
+        // the process lived long enough for its destructors to run to
+        // completion -- if it was SIGTERM-killed first (e.g. after the 5s
+        // SIGINT grace period expired), the enable command was never
+        // reversed and the arm stayed powered/enabled.
+        //
+        // hardware_->quit() / DriverDamiao::close() are now idempotent (see
+        // driver_damiao.cpp), so it's safe for this to run here AND again
+        // later from the destructor as a fallback.
+        if (hardware_)
+        {
+            hardware_->quit();
+        }
 
         for (auto i = 0; i < hw_stop_seconds_; ++i)
         {
@@ -180,6 +243,31 @@ namespace whi_arm_interface
         RCLCPP_INFO_STREAM(get_logger(), "\033[1;32m" <<
             "Hardware interface successfully stopped!"
             << "\033[0m");
+
+        return hardware_interface::CallbackReturn::SUCCESS;
+    }
+
+    hardware_interface::CallbackReturn WhiArmInterface::on_cleanup(
+        const rclcpp_lifecycle::State& /*PreState*/)
+    {
+        // NEW (2026-08-24): see header changelog. Remove util_node_ from the
+        // executor here, while executor_weak_ is still very likely to lock
+        // successfully (controller_manager is still alive and running this
+        // lifecycle transition), rather than leaving it to be discovered
+        // only when this object's destructor eventually runs.
+        detachUtilNode();
+
+        return hardware_interface::CallbackReturn::SUCCESS;
+    }
+
+    hardware_interface::CallbackReturn WhiArmInterface::on_shutdown(
+        const rclcpp_lifecycle::State& /*PreState*/)
+    {
+        // NEW (2026-08-24): some lifecycle paths go straight to shutdown
+        // without passing through cleanup first -- detachUtilNode() here
+        // covers that path too. Idempotent, so no harm if on_cleanup()
+        // already ran.
+        detachUtilNode();
 
         return hardware_interface::CallbackReturn::SUCCESS;
     }

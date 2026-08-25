@@ -92,6 +92,23 @@ void DriverDamiao::actuate(std::string /*Command*/)
 
 void DriverDamiao::close()
 {
+    // NEW: idempotency guard. close() can now legitimately be called twice
+    // in the lifetime of this object:
+    //   1) WhiArmInterface::on_deactivate() -> ArmHardwareOpenarm::quit()
+    //      -> this close(), on every lifecycle deactivate
+    //   2) ~ArmHardwareOpenarm() -> quit() -> this close() again, as a
+    //      destructor-time fallback in case deactivate never ran (e.g.
+    //      process killed before the lifecycle transition completed)
+    // exchange(true) atomically reads-the-old-value-and-sets-true; if some
+    // other call already flipped it to true, we bail out immediately instead
+    // of re-sending the deactivate command list and re-joining th_read_
+    // (joining an already-joined std::thread is undefined behavior --
+    // std::terminate on most implementations).
+    if (closed_.exchange(true))
+    {
+        return;
+    }
+
     if (protocol_ && protocol_->deactivate_commands_list_)
     {
         sendStaticCommands(*protocol_->deactivate_commands_list_);
@@ -144,6 +161,16 @@ void DriverDamiao::threadReadCan()
         unsigned char raw[8] = { 0 };
         ssize_t n = bus_->read(canId, raw);
 
+        // NEW: with CanBus now applying a recv timeout (SO_RCVTIMEO, see
+        // canbus.cpp), a timed-out read comes back as n <= 0 just like a
+        // real read error would. Either way this is the correct behavior
+        // here: loop back around and re-check terminated_. Before this fix,
+        // read() blocked indefinitely with no timeout, so if terminated_
+        // was set (from close()) while no frame was arriving on the bus,
+        // th_read_ would never wake up to observe it -- close()'s
+        // th_read_.join() would then hang, which is what stalled shutdown
+        // long enough to hit the 5s SIGINT->SIGTERM escalation seen in the
+        // launch log.
         if (n <= 0 || canId != recv_id_ || !protocol_)
         {
             continue;

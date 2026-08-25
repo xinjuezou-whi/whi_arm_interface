@@ -10,22 +10,49 @@ Written by Xinjue Zou, xinjue.zou.whi@gmail.com
 Apache License Version 2.0, check LICENSE for more information.
 All text above must be included in any redistribution.
 
+Changelog:
+2026-08-21: FIX: see canbus.h changelog for the same date -- bounded
+            copies in write()/read(), bounded+zero-inited constructors.
 ******************************************************************/
 #include "whi_arm_interface/canbus.h"
 #include "whi_arm_interface/printf_color.h"
 
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <iostream>
+
+// FIX: shared init used by both constructors. Zero every member struct so
+// nothing read before open() (ioctl/bind fields, iov_/msg_ layout, etc.) is
+// left as indeterminate stack/heap garbage, then copy Name into ifr_name
+// bounded to IFNAMSIZ with a guaranteed null terminator -- replaces the
+// previous unbounded strcpy(), which would silently overrun ifr_ (and
+// whatever CanBus member follows it in memory) if Name.size() >= IFNAMSIZ.
+void CanBus::initMembers(const char* Name)
+{
+    memset(&addr_, 0, sizeof(addr_));
+    memset(&ifr_, 0, sizeof(ifr_));
+    memset(&frame_, 0, sizeof(frame_));
+    memset(&iov_, 0, sizeof(iov_));
+    memset(&msg_, 0, sizeof(msg_));
+    memset(ctrlmsg, 0, sizeof(ctrlmsg));
+    memset(&event_pending_, 0, sizeof(event_pending_));
+
+    if (Name != nullptr)
+    {
+        strncpy(ifr_.ifr_name, Name, IFNAMSIZ - 1);
+        ifr_.ifr_name[IFNAMSIZ - 1] = '\0';
+    }
+}
 
 CanBus::CanBus(const char* Name)
 {
-    strcpy(ifr_.ifr_name, Name);
+    initMembers(Name);
 }
 
 CanBus::CanBus(const std::string& Name)
 {
-    strcpy(ifr_.ifr_name, Name.c_str());
+    initMembers(Name.c_str());
 }
 
 bool CanBus::open()
@@ -73,6 +100,21 @@ bool CanBus::open()
     {
         int rcvbuf = 1 << 20; // 1MB
         setsockopt(if_obj_.socket_, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
+    }
+
+    // NEW (2026-08-21): apply a receive timeout so blocking read() calls on
+    // this socket never wait forever. Without this, a reader thread that's
+    // been told to stop (e.g. DriverDamiao::threadReadCan() observing
+    // terminated_) has no way to wake up and notice that if no frame
+    // happens to be arriving on the bus at that moment -- it can only find
+    // out the next time a frame lands. On a quiet/idle bus that can be a
+    // very long wait, which in turn stalls close()'s th_read_.join() and,
+    // transitively, shutdown of the whole node.
+    {
+        struct timeval tv;
+        tv.tv_sec = recv_timeout_ms_ / 1000;
+        tv.tv_usec = (recv_timeout_ms_ % 1000) * 1000;
+        setsockopt(if_obj_.socket_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     }
 
     if (bind(if_obj_.socket_, (struct sockaddr*)&addr_, sizeof(addr_)) < 0)
@@ -135,7 +177,10 @@ bool CanBus::isOpen()
 
 bool CanBus::open(const std::string& Name)
 {
-    strcpy(ifr_.ifr_name, Name.c_str());
+    // FIX: bounded copy, same reasoning as initMembers()/constructors --
+    // the previous strcpy() here had no length check either.
+    strncpy(ifr_.ifr_name, Name.c_str(), IFNAMSIZ - 1);
+    ifr_.ifr_name[IFNAMSIZ - 1] = '\0';
     return open();  // 修复：直接复用 open()，is_open_ 已在其中设置，无需再赋值
 }
 
@@ -184,6 +229,19 @@ ssize_t CanBus::read(unsigned int& ID, unsigned char* Data)
             struct can_frame* classic = reinterpret_cast<struct can_frame*>(&frame);
             ID = classic->can_id;
             len = classic->can_dlc;
+            // FIX: can_dlc is a single byte straight off the wire. The
+            // kernel is expected to hand back a value in [0, 8] for a
+            // classic frame, but this was previously trusted unconditionally
+            // -- a malformed/adversarial frame (or a kernel/driver bug) with
+            // can_dlc > 8 would memcpy past the caller's fixed 8-byte Data
+            // buffer (e.g. DriverDamiao::threadReadCan()'s stack-local
+            // `unsigned char raw[8]`), corrupting whatever follows it on the
+            // stack without failing immediately. Clamp defensively, same as
+            // the FD branch below already does.
+            if (len > 8)
+            {
+                len = 8;
+            }
             memcpy(Data, classic->data, len);
         }
         else if (nbytes == CANFD_MTU)
@@ -202,6 +260,19 @@ ssize_t CanBus::read(unsigned int& ID, unsigned char* Data)
         }
         else
         {
+            // NEW (2026-08-21): with SO_RCVTIMEO now set in open(), a timed
+            // out read is an expected, routine outcome (it happens every
+            // recv_timeout_ms_ whenever the bus is momentarily idle), not
+            // an error -- so it must NOT print the "[warn] failed to read"
+            // below, or a reader thread on a quiet bus would spam that
+            // warning roughly 10x/second forever. Distinguish "genuinely
+            // timed out" (errno EAGAIN/EWOULDBLOCK) from any other real
+            // read failure, which still deserves the warning.
+            if (nbytes < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+            {
+                return -1;
+            }
+
             len = -1;
         }
 
@@ -230,7 +301,25 @@ bool CanBus::write(unsigned int ID, size_t Len, const unsigned char* Data)
 {
     if (if_obj_.socket_ >= 0)
     {
+        // FIX: can_frame.data is a fixed 8-byte array (CAN_MAX_DLEN). Len
+        // previously came straight from the caller (e.g.
+        // DriverDamiao::actuate() -> Protocol::composeCommand()'s bitpack
+        // path, whose output size is derived from protocol yaml config) with
+        // no bound check before the memcpy below. A misconfigured yaml
+        // (bit_fields totalling more than (8 - start_byte) bytes) would
+        // silently produce a >8-byte payload and overflow frame.data on the
+        // stack. Reject rather than truncate -- truncating would silently
+        // send a corrupt/short command to the joint, which is worse than
+        // failing loudly here.
+        if (Data == nullptr || Len > CAN_MAX_DLEN)
+        {
+            printf((std::string(RED) + "[error] write len %zu exceeds CAN_MAX_DLEN (%d) on %s, refusing to send" +
+                CLEANUP + "\n").c_str(), Len, CAN_MAX_DLEN, ifr_.ifr_name);
+            return false;
+        }
+
         struct can_frame frame;
+        memset(&frame, 0, sizeof(frame));
         frame.can_id = ID;
         if (isExtended(frame.can_id))
         {
@@ -296,7 +385,16 @@ std::size_t CanBus::eventTriggered(unsigned int& ID, unsigned char* Data)
             {
                 ID = frame_.can_id & CAN_SFF_MASK;
             }
-            memcpy(Data, frame_.data, frame_.len);
+            // FIX: frame_.len for a canfd_frame can be up to 64 (CANFD_MAX_DLEN);
+            // this function's contract (mirroring read()) assumes an 8-byte
+            // Data buffer from the caller. Clamp defensively -- same reasoning
+            // as read()'s FD branch.
+            std::size_t copyLen = frame_.len;
+            if (copyLen > 8)
+            {
+                copyLen = 8;
+            }
+            memcpy(Data, frame_.data, copyLen);
         }
     }
 
