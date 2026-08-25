@@ -74,7 +74,7 @@ namespace whi_arm_interface
     hardware_interface::CallbackReturn WhiArmInterface::on_init(const hardware_interface::HardwareComponentInterfaceParams& Params)
     {
         /// node version and copyright announcement
-		std::cout << "\nWHI arm interface VERSION 04.09.2" << std::endl;
+		std::cout << "\nWHI arm interface VERSION 04.09.3" << std::endl;
 		std::cout << "Copyright © 2022-2026 Wheel Hub Intelligent Co.,Ltd. All rights reserved\n" << std::endl;
 
         auto executor = Params.executor.lock();
