@@ -42,7 +42,8 @@ namespace whi_arm_interface
         void init();
 
     protected:
-        std::shared_ptr<HwConfig> hw_config_{ nullptr };
+        // std::shared_ptr<HwConfig> hw_config_{ nullptr };
+        HwConfig hw_config_;
         std::vector<std::string> joint_names_; // for specific order of joints
     };
 } // namespace whi_arm_interface

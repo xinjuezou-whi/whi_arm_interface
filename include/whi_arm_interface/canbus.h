@@ -26,36 +26,22 @@ Changelog:
             blocks forever in skb_wait_for_more_packets. read() is
             updated accordingly to accept either classic or FD frame
             sizes off the wire.
-2026-08-21: Add SO_RCVTIMEO recv timeout (configurable via
-            setRecvTimeoutMs(), defaults to 100ms if never set). Without
-            this, read() blocked indefinitely whenever no frame was
-            arriving on the bus -- harmless during normal operation, but
-            it meant a reader thread waiting to observe a "please stop"
-            flag (e.g. DriverDamiao::threadReadCan() checking
-            terminated_) could never wake up to notice it, which stalled
-            shutdown (see DriverDamiao::close()'s th_read_.join()) long
-            enough to blow past ros2 launch's 5s SIGINT grace period and
-            get SIGTERM-killed before the arm was ever de-energized.
-2026-08-21: FIX: bound-check all raw-buffer copies in/out of the fixed
-            8-byte can_frame.data. Neither write() nor the classic-frame
-            branch of read() previously clamped the copy length, so a
-            misconfigured protocol yaml (composeCommand() producing a
-            >8-byte payload) or a malformed/adversarial frame on the bus
-            (an out-of-range can_dlc) could write past frame.data -- a
-            stack buffer overflow that corrupts adjacent stack memory
-            without failing immediately, surfacing later as an unrelated
-            "free(): invalid size" abort. Also replaced the unbounded
-            strcpy() in both constructors with a bounded, always-
-            null-terminated copy into ifr_.ifr_name (IFNAMSIZ), and
-            zero-initialize all members so nothing is read uninitialized
-            before open() runs.
+2026-08-26: Add shutdown eventfd registered into the same epoll instance
+            as the CAN socket. epoll_wait() in eventTriggered() was
+            waiting with an infinite timeout (-1) and had no way to be
+            woken up from another thread, so a caller's read thread
+            parked in eventTriggered() could never observe a shutdown
+            flag being set elsewhere -- join() on that thread would hang
+            forever. requestShutdown() lets close()/the owning driver
+            wake the blocked epoll_wait() on demand instead of guessing
+            a timeout value.
 ******************************************************************/
 #pragma once
 #include <net/if.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
-#include <sys/time.h>
+#include <sys/eventfd.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <string>
@@ -80,6 +66,8 @@ public:
 	void close();
 	ssize_t read(unsigned int& ID, unsigned char* Data);
 	bool write(unsigned int ID, size_t Len, const unsigned char* Data);
+	// returns 0 when woken by requestShutdown() (no CAN data available in
+	// that case) or when nbytes read <= 0; otherwise returns nbytes read
 	std::size_t eventTriggered(unsigned int& ID, unsigned char* Data);
 	bool isExtended(unsigned int ID) const;
 	// NEW: set a kernel-side receive filter so this socket only gets frames
@@ -90,11 +78,10 @@ public:
 	// NEW: remove any previously set filter (socket will receive all frames
 	// on the bus again after the next open())
 	void clearRecvFilter() { recv_filter_id_.reset(); }
-	// NEW: configure the SO_RCVTIMEO applied to the socket in open(). Must
-	// be called BEFORE open()/open(Name) for it to take effect. If never
-	// called, open() falls back to a 100ms default -- read() is never
-	// allowed to block forever.
-	void setRecvTimeoutMs(int Ms) { recv_timeout_ms_ = Ms; }
+	// NEW: wake up a thread currently blocked in eventTriggered()'s
+	// epoll_wait(). Safe to call from any thread. No-op if the eventfd
+	// was never created (open() not called, or eventfd() failed).
+	void requestShutdown();
 
 protected:
 	struct IfInfo // bundled information per open socket
@@ -105,16 +92,11 @@ protected:
 	};
 
 protected:
-	// FIX: shared helper for both constructors -- bounded name copy plus
-	// zero-initializing every member that open()/read()/write() touch, so
-	// nothing is left uninitialized (and thus undefined) before open() runs.
-	void initMembers(const char* Name);
-
-protected:
 	struct sockaddr_can addr_;
 	struct ifreq ifr_;
 	struct IfInfo if_obj_;
 	int fd_epoll_{ -1 };
+	int fd_shutdown_{ -1 }; // NEW: eventfd used to interrupt epoll_wait()
 	bool is_open_{ false };
 	struct canfd_frame frame_;
 	struct iovec iov_;
@@ -124,6 +106,4 @@ protected:
 	struct epoll_event event_setup_ = { .events = EPOLLIN }; // prepare the common part
 	// NEW: optional recv-side filter id, applied in open() via CAN_RAW_FILTER
 	std::optional<canid_t> recv_filter_id_{ std::nullopt };
-	// NEW: recv timeout applied in open() via SO_RCVTIMEO, default 100ms
-	int recv_timeout_ms_{ 100 };
 };

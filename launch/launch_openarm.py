@@ -127,7 +127,12 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-        declared_arguments + [spawn_func, TimerAction(period=2.0, actions=[
-            jsb_spawner, left_arm_spawner, right_arm_spawner, left_gripper_spawner, right_gripper_spawner
+        declared_arguments + [spawn_func, TimerAction(period=2.0,
+            actions=[
+                jsb_spawner,
+                left_arm_spawner,
+                right_arm_spawner,
+                left_gripper_spawner,
+                right_gripper_spawner
         ])]
     )

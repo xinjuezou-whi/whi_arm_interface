@@ -21,7 +21,8 @@ namespace whi_arm_interface
     {
         if (parseConfig(Config))
         {
-            hw_config_->printOut();
+            // hw_config_->printOut();
+            hw_config_.printOut();
             init();
         }
     }
@@ -33,7 +34,8 @@ namespace whi_arm_interface
 
     std::string ArmHardwareOpenarm::getSwEstopTopic() const
     {
-        return hw_config_ ? hw_config_->sw_estop_topic_ : std::string("estop");
+        // return hw_config_ ? hw_config_->sw_estop_topic_ : std::string("estop");
+        return hw_config_.sw_estop_topic_;
     }
 
     bool ArmHardwareOpenarm::setIo(int /*Addr*/, int /*Level*/)
@@ -46,7 +48,7 @@ namespace whi_arm_interface
     {
         try
         {
-            hw_config_ = std::make_shared<HwConfig>();
+            // hw_config_ = std::make_shared<HwConfig>();
             YAML::Node node = YAML::LoadFile(Config);
 
             const auto& root = node["whi_arm_interface"];
@@ -55,7 +57,8 @@ namespace whi_arm_interface
                 const auto& estopTopic = root["sw_estop_topic"];
                 if (estopTopic)
                 {
-                    hw_config_->sw_estop_topic_ = estopTopic.as<std::string>();
+                    // hw_config_->sw_estop_topic_ = estopTopic.as<std::string>();
+                    hw_config_.sw_estop_topic_ = estopTopic.as<std::string>();
                 }
 
                 const auto& canbus = root["canbus"];
@@ -87,7 +90,8 @@ namespace whi_arm_interface
                         motor.multiple_ = it.second["multiple"].as<bool>();
 
                         joint_names_.push_back(it.first.as<std::string>());
-                        hw_config_->motors_map_.emplace(joint_names_.back(), std::move(motor));
+                        // hw_config_->motors_map_.emplace(joint_names_.back(), std::move(motor));
+                        hw_config_.motors_map_.emplace(joint_names_.back(), std::move(motor));
                     }
                 }
 
@@ -97,7 +101,8 @@ namespace whi_arm_interface
                     const auto& printConfig = debug["print_config"];
                     if (printConfig)
                     {
-                        hw_config_->debug_print_config_ = printConfig.as<bool>();
+                        // hw_config_->debug_print_config_ = printConfig.as<bool>();
+                        hw_config_.debug_print_config_ = printConfig.as<bool>();
                     }
                 }
 
@@ -108,21 +113,22 @@ namespace whi_arm_interface
                 RCLCPP_FATAL_STREAM(rclcpp::get_logger("WhiArmInterface"), "\033[1;31m" <<
                     "failed to find whi_arm_interface properties in " << Config
                     << "\033[0m");
-                hw_config_.reset();
+                // hw_config_.reset();
                 return false;
             }
         }
         catch (const std::exception& e)
         {
             std::cerr << "failed to load openarm hardware config " << Config << " with error: " << e.what() << std::endl;
-            hw_config_.reset();
+            // hw_config_.reset();
             return false;
         }
     }
 
     void ArmHardwareOpenarm::init()
     {
-        for (const auto& [name, motor] : hw_config_->motors_map_)
+        // for (const auto& [name, motor] : hw_config_->motors_map_)
+        for (const auto& [name, motor] : hw_config_.motors_map_)
         {
             auto driver = std::make_unique<DriverDamiao>(name, motor.bus_addr_,
                 uint16_t(motor.device_addr_), uint16_t(motor.recv_device_addr_),
@@ -165,5 +171,6 @@ namespace whi_arm_interface
         {
             it.second->close();
         }
+        drivers_map_.clear();
     }
 } // namespace whi_arm_interface

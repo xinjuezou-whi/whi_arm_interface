@@ -92,7 +92,7 @@ void DriverDamiao::actuate(std::string /*Command*/)
 
 void DriverDamiao::close()
 {
-    // NEW: idempotency guard. close() can now legitimately be called twice
+    // idempotency guard. close() can now legitimately be called twice
     // in the lifetime of this object:
     //   1) WhiArmInterface::on_deactivate() -> ArmHardwareOpenarm::quit()
     //      -> this close(), on every lifecycle deactivate
@@ -113,7 +113,15 @@ void DriverDamiao::close()
     {
         sendStaticCommands(*protocol_->deactivate_commands_list_);
     }
+
     terminated_.store(true);
+    if (bus_)
+    {
+        // wake up threadReadCan() if it's currently blocked inside
+        // bus_->eventTriggered()'s epoll_wait(-1); without this, join()
+        // below would hang until a CAN frame happens to arrive.
+        bus_->requestShutdown();
+    }
     if (th_read_.joinable())
     {
         th_read_.join();
@@ -159,20 +167,18 @@ void DriverDamiao::threadReadCan()
 
         unsigned int canId = 0;
         unsigned char raw[8] = { 0 };
-        ssize_t n = bus_->read(canId, raw);
-
-        // NEW: with CanBus now applying a recv timeout (SO_RCVTIMEO, see
-        // canbus.cpp), a timed-out read comes back as n <= 0 just like a
-        // real read error would. Either way this is the correct behavior
-        // here: loop back around and re-check terminated_. Before this fix,
-        // read() blocked indefinitely with no timeout, so if terminated_
-        // was set (from close()) while no frame was arriving on the bus,
-        // th_read_ would never wake up to observe it -- close()'s
-        // th_read_.join() would then hang, which is what stalled shutdown
-        // long enough to hit the 5s SIGINT->SIGTERM escalation seen in the
-        // launch log.
-        if (n <= 0 || canId != recv_id_ || !protocol_)
+        // switched from the raw ::read()-based CanBus::read() to
+        // CanBus::eventTriggered(): the latter is epoll-based and, since
+        // canbus.cpp now registers a shutdown eventfd in the same epoll
+        // instance, close()'s bus_->requestShutdown() can wake this thread
+        // out of its blocking wait immediately instead of it being stuck
+        // until a real CAN frame arrives (or forever, if none ever does).
+        std::size_t n = bus_->eventTriggered(canId, raw);
+        if (n == 0 || canId != recv_id_ || !protocol_)
         {
+            // n == 0 covers both "woken by requestShutdown()" and "no
+            // usable frame decoded" -- either way, loop back and let the
+            // while() condition re-check terminated_.
             continue;
         }
 
